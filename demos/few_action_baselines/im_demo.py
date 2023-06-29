@@ -39,7 +39,7 @@ def ising_initial_policy(key,state,config):
     )
 
 
-policy_isinginitial_jit = jit(partial(ising_initial_policy, config=config))
+ising_initial_policy_jit = jit(partial(ising_initial_policy, config=config))
 
 
 NUM_STEPS = 1000
@@ -61,7 +61,7 @@ activity_jit = jit(activity)  #activity counts flips
 
 for _ in range(NUM_STEPS):
 
-    logp, (a_t, _) = env.policy_isinginitial_jit(next(rng), s_t)
+    logp, (a_t, _) = ising_initial_policy_jit(next(rng), s_t)
 
     logp_cache.append(logp)  # entropy
 

@@ -42,13 +42,19 @@ def random_initial_state(key, config):
 
     num_particles = jax.random.randint(subkey, [1], 1, config["L"]**config["d"] + 1).item()
 
-    initial_state = np.array([1] * num_particles + [0] * (config["L"] - num_particles))
+    initial_state = np.array([1] * num_particles + [0] * (config["L"]**config["d"] - num_particles))
  
+    print(config["L"]**config["d"])
+    print(num_particles)
+    print(len(initial_state))
 
     key, subkey = jax.random.split(key)
     initial_state = jax.random.permutation(subkey, initial_state, independent=True)
 
-    initial_state = np.reshape(initial_state,(config["L"])*config["d"])
+    initial_state = np.reshape(initial_state,(config["L"], -1))
+        
+    print(initial_state)
+
 
     return initial_state
 
