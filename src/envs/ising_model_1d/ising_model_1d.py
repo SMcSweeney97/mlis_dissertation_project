@@ -110,28 +110,48 @@ def reward_components(s_t, a_t, s_tp1, config):
 
 def reward(s_t, a_t, s_tp1, config):
     """Return the reward components summed"""
+
     r_bias = -config["bias"] * config["obs_fn"](s_t, a_t, s_tp1)
     r_logp_ref = logp_ref(s_t, a_t, config)
+
     return r_bias + r_logp_ref
 
 
-def step_fn(s_t, a_t, config):
+def step_fn(self, s_t, a_t, config):
     """Performs the alternating EM step to update the current state and release the reward"""
 
     ## start here for us
     # calc unnormalised prob for state
     # sample from proposal (random spin)
     # calc alpha function (prob of proposal)
-    
+    #state, action--- is the flip possible
+
     s_tp1 = update_one_flip_action(s_t, a_t)
+    s_t_energy = get_energy(s_t, config["d"])
+    s_tp1_energy = get_energy(s_tp1, config["d"])
+    energy_difference = s_tp1_energy-s_t_energy
+    
+    self.key, subkey = jax.random.split(self.key)
 
-    r_t = reward(s_t, a_t, s_tp1, config)
+    if((energy_difference>0) & jnp.random.uniform(subkey)< np.exp(-config["temp"]*energy_difference)):
+        s_t= s_tp1
+        r_t = reward(s_t, a_t, s_tp1, config)
+    elif(energy_difference<=0):
+        s_t= s_tp1
+        r_t = reward(s_t, a_t, s_tp1, config)
+    else:
+        s_tp1=s_t
+        r_t = reward(s_t, config["L"], s_tp1, config)
 
+        
     return s_tp1, r_t
 
 def metropolis():
     
     return 
+
+
+
 # %%
 def convertLattice(lattice):
     lattice = (lattice * 2) - 1
@@ -221,6 +241,14 @@ class IsingModel(BinarySpinsSingleFlip):
         self.config = self.check_config(config)
         super().__init__(config)
 
+
+        if key is not None:
+            self.key = key
+        elif seed is not None:
+            self.key = jax.random.PRNGKey(seed)
+        else:
+            raise ValueError("Must provide a key (preferentially) or a seed on init")
+
         # JIT THE STEP, REFERENCE DYNAMICS AND PRED_ACTION_IS_AVAILABLE
         self.step_fn_jit = fix_config_and_jit(step_fn, config)
         self.constraint_jit = jax.jit(constraint)
@@ -229,12 +257,6 @@ class IsingModel(BinarySpinsSingleFlip):
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
 
-        if key is not None:
-            self.key = key
-        elif seed is not None:
-            self.key = jax.random.PRNGKey(seed)
-        else:
-            raise ValueError("Must provide a key (preferentially) or a seed on init")
 
         self.state = None
 
