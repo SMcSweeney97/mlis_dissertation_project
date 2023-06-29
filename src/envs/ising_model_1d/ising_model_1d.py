@@ -40,13 +40,20 @@ def random_initial_state(key, config):
     """
     key, subkey = jax.random.split(key)
 
-    num_particles = jax.random.randint(subkey, [1], 1, config["L"] + 1).item()
+    num_particles = jax.random.randint(subkey, [1], 1, config["L"]**config["d"] + 1).item()
+
     initial_state = np.array([1] * num_particles + [0] * (config["L"] - num_particles))
+ 
 
     key, subkey = jax.random.split(key)
     initial_state = jax.random.permutation(subkey, initial_state, independent=True)
 
+    initial_state = np.reshape(initial_state,(config["L"])*config["d"])
+
     return initial_state
+
+
+
 
 def constraint(state, action):
 
