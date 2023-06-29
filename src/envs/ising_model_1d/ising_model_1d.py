@@ -132,13 +132,42 @@ def step_fn(s_t, a_t, config):
 def metropolis():
     
     return 
+# %%
+def convertLattice(lattice):
+    lattice = (lattice * 2) - 1
+    return lattice
 
-def get_energy(lattice):
-    # applies the nearest neighbours summation
-    kern = generate_binary_structure(2, 1) 
-    kern[1][1] = False
+# %%
+def get_energy(lattice, dimensions):    
+    lattice = convertLattice(lattice)
+    kern=np.zeros([3]*dimensions, bool)   
+
+    for n in range(dimensions):
+        b = [1]*dimensions
+        c = b.copy()
+        b[n] = 0
+        c[n] = 2
+        
+        b = tuple(b)
+        c = tuple(c)
+        
+        kern[b] = True
+        kern[c] = True
+        
+    print(kern)
     arr = -lattice * convolve(lattice, kern, mode='constant', cval=0)
     return arr.sum()
+
+
+# %%
+from scipy.ndimage import convolve, generate_binary_structure
+import numpy as np
+
+lattice = np.array([[1,0,1],[0,1,1],[1,1,0],[1,1,0]])
+# print(lattice)
+get_energy(lattice, 2)
+
+# %%
 
 
 def policy_ref(key, state, config):
@@ -165,7 +194,7 @@ def policy_ref(key, state, config):
     return logp, (action, key)
 
 
-class EastModel(BinarySpinsSingleFlip):
+class IsingModel(BinarySpinsSingleFlip):
     """Gym Environment for the East Model.
     This is a Binary spin environment with few actions and a local kinetic constraint.
     An action corresponds to flipping a single spin.
