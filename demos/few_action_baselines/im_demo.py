@@ -22,7 +22,7 @@ from src.utils.evaluation import (
 
 # %% INIT ENV
 rng = hk.PRNGSequence(123)
-config = {"L": 20, "bias": 0, "d": 2, "render_mode": None, "obs_fn": activity, "mean": 0}
+config = {"L": 20, "bias": 0, "d": 2, "temp":0.2, "render_mode": None, "obs_fn": activity, "mean": 0}
 env = IsingModel(config)
 
 
