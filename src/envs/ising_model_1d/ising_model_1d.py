@@ -14,7 +14,6 @@ from components.spin_models import BinarySpinsSingleFlip
 from components.updates import update_one_flip_action
 from scipy.ndimage import convolve, generate_binary_structure
 
-
 from utils.utils import (
     assert_config_has_keys,
     assert_config_values_are_even,
@@ -39,9 +38,7 @@ def random_initial_state(key, config):
         state (array): DeviceArray containing the state of the system
     """
     key, subkey = jax.random.split(key)
-
     num_particles = jax.random.randint(subkey, [1], 1, config["L"]**config["d"] + 1).item()
-
     initial_state = np.array([1] * num_particles + [0] * (config["L"]**config["d"] - num_particles))
  
     print(config["L"]**config["d"])
@@ -50,14 +47,14 @@ def random_initial_state(key, config):
 
     key, subkey = jax.random.split(key)
     initial_state = jax.random.permutation(subkey, initial_state, independent=True)
-
-    initial_state = np.reshape(initial_state,(config["L"], -1))
+    temp=config["L"]*config["d"]
+    initial_state = jax.numpy.reshape(initial_state,(config["L"], -1))
         
     print(initial_state)
 
 
     return initial_state
-
+ 
 
 
 
@@ -123,7 +120,7 @@ def reward(s_t, a_t, s_tp1, config):
     return r_bias + r_logp_ref
 
 
-def step_fn(self, s_t, a_t, config):
+def step_fn(key, s_t, a_t, config):
     """Performs the alternating EM step to update the current state and release the reward"""
 
     ## start here for us
@@ -137,9 +134,10 @@ def step_fn(self, s_t, a_t, config):
     s_tp1_energy = get_energy(s_tp1, config["d"])
     energy_difference = s_tp1_energy-s_t_energy
     
-    self.key, subkey = jax.random.split(self.key)
+    key, subkey = jax.random.split(key)
+    # subkey = 0.2
 
-    if((energy_difference>0) & jnp.random.uniform(subkey)< np.exp(-config["temp"]*energy_difference)):
+    if((energy_difference>0) & (jax.random.uniform(subkey)< jnp.exp(-config["temp"]*energy_difference))):
         s_t= s_tp1
         r_t = reward(s_t, a_t, s_tp1, config)
     elif(energy_difference<=0):
@@ -150,7 +148,7 @@ def step_fn(self, s_t, a_t, config):
         r_t = reward(s_t, config["L"], s_tp1, config)
 
         
-    return s_tp1, r_t
+    return key, s_tp1, r_t
 
 def metropolis():
     
@@ -159,41 +157,50 @@ def metropolis():
 
 
 # %%
-def convertLattice(lattice):
-    lattice = (lattice * 2) - 1
-    return lattice
-
-# %%
 def get_energy(lattice, dimensions):    
-    lattice = convertLattice(lattice)
-    kern=np.zeros([3]*dimensions, bool)   
+
+    lattice = (lattice * 2) - 1
+    kern=jax.numpy.zeros([3]*dimensions, bool)   
 
     for n in range(dimensions):
-        b = [1]*dimensions
-        c = b.copy()
-        b[n] = 0
-        c[n] = 2
+        b = jax.numpy.array([1]*dimensions)
+        c = jax.numpy.array([1]*dimensions)
+        #b = jax.numpy.ones(dimensions, int)   
+        #c = jax.numpy.ones(dimensions, int) 
+        print(b)
+        b=b.at[n].add(-1)
+        c=c.at[n].add(1)
+        print(b)
+        #b[n] = 0
+        #c[n] = 2
         
         b = tuple(b)
         c = tuple(c)
-        
-        kern[b] = True
-        kern[c] = True
+        print(kern)
+
+        kern=kern.at[b].add(1)
+        kern=kern.at[c].add(1)
+        #kern[b] = True
+        #kern[c] = True
         
     print(kern)
-    arr = -lattice * convolve(lattice, kern, mode='constant', cval=0)
-    return arr.sum()
+    
+    arr = jnp.multiply(-lattice, jax.scipy.signal.convolve(lattice,kern, mode='same', method='direct')) #convolve(lattice, kern, mode='constant', cval=0)
+    return jnp.sum(arr)
 
 
 # %%
 from scipy.ndimage import convolve, generate_binary_structure
 import numpy as np
+import jax.numpy as jnp
 
-lattice = np.array([[1,0,1],[0,1,1],[1,1,0],[1,1,0]])
+import jax
+
+lattice = np.array([[1,1,1],[0,1,1],[1,1,0],[1,1,1]])
 # print(lattice)
 get_energy(lattice, 2)
 
-# %%
+    # %%
 
 
 def policy_ref(key, state, config):
@@ -281,7 +288,9 @@ class IsingModel(BinarySpinsSingleFlip):
         constraint_reward = 0.0
         s_t = self.state
 
-        s_tp1, r_t = self.step_fn_jit(s_t, action)
+        self.key, subkey = jax.random.split(self.key)
+
+        self.key, s_tp1, r_t = self.step_fn_jit(subkey, s_t, action)
         r_t += constraint_reward
 
         action_avail = self.constraint_jit(s_t, action)
