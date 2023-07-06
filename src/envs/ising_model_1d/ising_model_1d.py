@@ -96,6 +96,7 @@ def logp_ref(s_t, a_t, config):
     )
     return logp
     # return 1
+    
 
 def logp_prob(s_t, a_t, config):
     # two objects to calculate prob for, 
@@ -143,25 +144,32 @@ def step_fn(key, s_t, a_t, config):
         s_t = s_tp1
         r_t = reward(s_t, a_t, s_tp1, config)
         
-        # return s_t, r_t
+        return s_t, r_t
     
     def false_cond(s_t, a_t, s_tp1, config):
         s_tp1 = s_t
         r_t = reward(s_t, config["L"], s_tp1, config)
         
-        # return s_tp1, r_t
+        return s_tp1, r_t
     
-    a = cond(
-        ((energy_difference > 0) & (jax.random.uniform(subkey) < jnp.exp(-config["temp"]*energy_difference))) | (energy_difference <= 0), 
-        true_cond(s_t, a_t, s_tp1, config),  
-        false_cond(s_t, a_t, s_tp1, config), 
-        a_t, s_t, s_tp1, config,
-    )
+    
+    G = ((energy_difference > 0) & (jax.random.uniform(subkey) < jnp.exp(-config["temp"]*energy_difference))) | (energy_difference <= 0)
+    s_tp1 = G*s_tp1 -(G-1)*s_t
+    r_t = G*reward(s_t, a_t, s_tp1, config) -(G-1)* reward(s_t, config["L"], s_tp1, config)
+    
+    # s_tp1, r_t = cond(
+    #     True, 
+    #     true_cond,  
+    #     false_cond, 
+    
+    #     s_t, a_t, s_tp1, config
+    # )
     
         
     return key, s_tp1, r_t
 
 def metropolis():
+    
     
     return 
 
