@@ -14,7 +14,6 @@ from components.spin_models import BinarySpinsSingleFlip
 from components.updates import update_one_flip_action
 from scipy.ndimage import convolve, generate_binary_structure
 
-
 from utils.utils import (
     assert_config_has_keys,
     assert_config_values_are_even,
@@ -57,7 +56,7 @@ def random_initial_state(key, config):
 
 
     return initial_state
-
+ 
 
 
 
