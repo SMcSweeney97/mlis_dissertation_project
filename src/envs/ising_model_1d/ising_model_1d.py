@@ -1,5 +1,5 @@
 import jax.numpy as jnp
-from jax.lax import cond, conv
+from jax.lax import cond, conv, fori_loop
 import numpy as np
 import sys, os
 import jax
@@ -139,36 +139,15 @@ def step_fn(key, s_t, a_t, config):
     energy_difference = s_tp1_energy-s_t_energy # Compares energy difference
     
     key, subkey = jax.random.split(key)
-
-    def true_cond(s_t, a_t, s_tp1, config):
-        s_t = s_tp1
-        r_t = reward(s_t, a_t, s_tp1, config)
-        
-        return s_t, r_t
-    
-    def false_cond(s_t, a_t, s_tp1, config):
-        s_tp1 = s_t
-        r_t = reward(s_t, config["L"], s_tp1, config)
-        
-        return s_tp1, r_t
-    
     
     G = ((energy_difference > 0) & (jax.random.uniform(subkey) < jnp.exp(-config["temp"]*energy_difference))) | (energy_difference <= 0)
-    s_tp1 = G*s_tp1 -(G-1)*s_t
-    r_t = G*reward(s_t, a_t, s_tp1, config) -(G-1)* reward(s_t, config["L"], s_tp1, config)
-    
-    # s_tp1, r_t = cond(
-    #     True, 
-    #     true_cond,  
-    #     false_cond, 
-    
-    #     s_t, a_t, s_tp1, config
-    # )
+    s_tp1 = int(G)*s_tp1 -(int(G)-1)*s_t
+    r_t = int(G)*reward(s_t, a_t, s_tp1, config) -(int(G)-1)* reward(s_t, config["L"], s_tp1, config)
     
         
     return key, s_tp1, r_t
 
-def metropolis():
+def kl_divergence():
     
     
     return 
@@ -177,8 +156,9 @@ def metropolis():
 def get_energy(lattice, dimensions):    
     lattice = (lattice * 2) - 1
     kern = jnp.zeros([3]*dimensions, bool)
-
-    for n in range(dimensions): # modify it to use fori loops instead
+    
+    def run_energy(n, init_val):
+        kern = init_val
         b = jnp.array([1]*dimensions)
         c = jnp.array([1]*dimensions)
         
@@ -190,24 +170,23 @@ def get_energy(lattice, dimensions):
                 
         kern = kern.at[b].set(True)        
         kern = kern.at[c].set(True)
-
         
-    # print(type(kern))
-    # print(type(lattice))
+        return kern
+    
+    kern = fori_loop(0, dimensions, run_energy, kern)
+        
     arr = -lattice * jax.scipy.signal.convolve(lattice, kern, mode='same', method="direct")
     return jnp.sum(arr)
 
-
-
 # %%
-from scipy.ndimage import convolve, generate_binary_structure
-import numpy as np
-import jax.numpy as jnp
+# from scipy.ndimage import generate_binary_structure
+# import numpy as np
+# import jax.numpy as jnp
+# from jax.lax import cond, conv, fori_loop
 
-
-lattice = jnp.array([[1,1,1],[0,1,1],[1,1,0],[1,1,1]])
-# print(lattice)
-get_energy(lattice, 2)
+# lattice = jnp.array([[1,1,1],[0,1,1],[1,1,0],[1,1,1]])
+# # print(lattice)
+# get_energy(lattice, 2)
 
 
 # %%
@@ -296,9 +275,7 @@ class IsingModel(BinarySpinsSingleFlip):
         constraint_reward = 0.0
         s_t = self.state
         
-        self.key, subkey = jax.random.split(self.key)
-
-        self.key, s_tp1, r_t = self.step_fn_jit(subkey, s_t, action)
+        self.key, s_tp1, r_t = self.step_fn_jit(self.key, s_t, action)
         r_t += constraint_reward
 
         action_avail = self.constraint_jit(s_t, action)
