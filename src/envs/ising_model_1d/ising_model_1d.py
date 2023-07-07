@@ -4,6 +4,8 @@ import numpy as np
 import sys, os
 import jax
 
+from gymnasium import spaces
+
 jax.config.update("jax_enable_x64", True) # 64 precision helps prevent under and overflow
 
 # pylint: disable=wrong-import-position
@@ -42,21 +44,21 @@ def random_initial_state(key, config):
     num_particles = jax.random.randint(subkey, [1], 1, config["L"]**config["D"] + 1).item()
 
     initial_state = jnp.array([1] * num_particles + [0] * (config["L"]**config["D"] - num_particles))
- 
+
     print(config["L"]**config["D"])
     print(num_particles)
     print(len(initial_state))
 
-    key, subkey = jax.random.split(key) # add dtype argument (64) 
+    key, subkey = jax.random.split(key) # add dtype argument (64)
     initial_state = jax.random.permutation(subkey, initial_state, independent=True)
 
     initial_state = jnp.reshape(initial_state,(config["L"], -1))
-        
+
     print(initial_state)
 
 
     return initial_state
- 
+
 
 
 
@@ -96,10 +98,10 @@ def logp_ref(s_t, a_t, config):
     )
     return logp
     # return 1
-    
+
 
 def logp_prob(s_t, a_t, config):
-    # two objects to calculate prob for, 
+    # two objects to calculate prob for,
     return 1
 
 def logp_prop(s_t, a_t, config):
@@ -131,67 +133,67 @@ def step_fn(key, s_t, a_t, config):
     # sample from proposal (random spin)
     # calc alpha function (prob of proposal)
     # state, action--- is the flip possible
-    
+
 
     s_tp1 = update_one_flip_action(s_t, a_t)
     s_t_energy = get_energy(s_t, config["D"]) # Gets energy for current state
     s_tp1_energy = get_energy(s_tp1, config["D"]) # Gets energy for the next state
     energy_difference = s_tp1_energy-s_t_energy # Compares energy difference
-    
+
     key, subkey = jax.random.split(key)
 
     def true_cond(s_t, a_t, s_tp1, config):
         s_t = s_tp1
         r_t = reward(s_t, a_t, s_tp1, config)
-        
+
         return s_t, r_t
-    
+
     def false_cond(s_t, a_t, s_tp1, config):
         s_tp1 = s_t
         r_t = reward(s_t, config["L"], s_tp1, config)
-        
+
         return s_tp1, r_t
-    
-    
+
+
     G = ((energy_difference > 0) & (jax.random.uniform(subkey) < jnp.exp(-config["temp"]*energy_difference))) | (energy_difference <= 0)
     s_tp1 = G*s_tp1 -(G-1)*s_t
     r_t = G*reward(s_t, a_t, s_tp1, config) -(G-1)* reward(s_t, config["L"], s_tp1, config)
-    
+
     # s_tp1, r_t = cond(
-    #     True, 
-    #     true_cond,  
-    #     false_cond, 
-    
+    #     True,
+    #     true_cond,
+    #     false_cond,
+
     #     s_t, a_t, s_tp1, config
     # )
-    
-        
+
+
     return key, s_tp1, r_t
 
 def metropolis():
-    
-    
-    return 
+
+
+    return
 
 # %%
-def get_energy(lattice, dimensions):    
+def get_energy(lattice, dimensions):
     lattice = (lattice * 2) - 1
     kern = jnp.zeros([3]*dimensions, bool)
 
     for n in range(dimensions): # modify it to use fori loops instead
         b = jnp.array([1]*dimensions)
         c = jnp.array([1]*dimensions)
-        
+
         b = b.at[n].add(-1)
         c = c.at[n].add(1)
-        
+
         b = tuple(b)
         c = tuple(c)
-                
-        kern = kern.at[b].set(True)        
+
+        kern = kern.at[b].set(True)
         kern = kern.at[c].set(True)
 
-        
+
     # print(type(kern))
     # print(type(lattice))
     arr = -lattice * jax.scipy.signal.convolve(lattice, kern, mode='same', method="direct")
@@ -262,6 +264,9 @@ class IsingModel(BinarySpinsSingleFlip):
         self.config = self.check_config(config)
         super().__init__(config)
 
+        self.action_space = spaces.Discrete(config["L"] + 1)
+        self.observation_space = spaces.Box(0,1,(20,))
+
 
         if key is not None:
             self.key = key
@@ -295,7 +300,7 @@ class IsingModel(BinarySpinsSingleFlip):
 
         constraint_reward = 0.0
         s_t = self.state
-        
+
         self.key, subkey = jax.random.split(self.key)
 
         self.key, s_tp1, r_t = self.step_fn_jit(subkey, s_t, action)
