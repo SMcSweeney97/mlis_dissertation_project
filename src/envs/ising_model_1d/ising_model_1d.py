@@ -27,9 +27,9 @@ from utils.utils import (
 # pylint: enable=wrong-import-position
 # pylint: enable=import-error
 
-
+"""
 def random_initial_state(key, config):
-    """Generates a random initial state for the environment.
+    \"""Generates a random initial state for the environment.
     State has at least one particle in it, so that the dark state is not created.
 
     Args:
@@ -38,7 +38,7 @@ def random_initial_state(key, config):
 
     Returns:
         state (array): DeviceArray containing the state of the system
-    """
+    \"""
     key, subkey = jax.random.split(key)
 
     num_particles = jax.random.randint(subkey, [1], 1, config["L"]**config["D"] + 1).item()
@@ -58,7 +58,27 @@ def random_initial_state(key, config):
 
 
     return initial_state
+"""
+def random_initial_state(key, config):
+    """Generates a random initial state for the environment.
+    State has at least one particle in it, so that the dark state is not created.
 
+    Args:
+        key (jax.random.PRNGKey): random key
+        config (dict): configuration dictionary
+
+    Returns:
+        state (array): DeviceArray containing the state of the system
+    """
+    # Create an n-dimensional array of zeros
+    desired_shape = (config["L"],) * config["D"]
+    zeros_array = jnp.zeros(desired_shape)
+
+    # Convert each element to uniformly chosen 0 or 1
+    key, subkey = jax.random.split(key)  # Random number generator key
+    uniform_array = jax.random.randint(subkey, shape=zeros_array.shape, minval=0, maxval=2, dtype=jnp.uint8)
+
+    return uniform_array
 
 
 
