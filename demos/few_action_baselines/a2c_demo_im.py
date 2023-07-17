@@ -42,7 +42,7 @@ rng = hk.PRNGSequence(seed_env)
 config = {"L": 20, "bias": 0, "d": 2, "D": 2, "temp":0.2, "render_mode": None, "obs_fn": activity, "mean": 0}
 env = IsingModel(config)
 # %%
-def func_v(S, is_training):
+def func_v(S, is_training): #if gaussian instead of sequential should be a dict of mew and sigma
     value = hk.Sequential((hk.Linear(1, w_init=jnp.zeros), jnp.ravel))
     return value(S)
 
@@ -101,7 +101,7 @@ for t in range(NUM_STEPS):
         assert np.allclose(transition_batch.Rn, reward_diff[t-1])
 
 
-        td_error_ref_batch = transition_batch.Rn + vf(transition_batch.S_next) - vf(transition_batch.S)
+        td_error_ref_batch = transition_batch.Rn + vf(transition_batch.S_next) - vf(transition_batch.S) #actor-critic explains and should estimate rewards from now onwards
         
         metrics_v, td_error = simple_td.update(transition_batch, return_td_error=True)
         
