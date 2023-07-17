@@ -67,6 +67,8 @@ for ep in range(1000):
         tracer.add(s, a, r, done or truncated)
         while tracer:
             transition_batch = tracer.pop()
+            print("W: ", transition_batch.W.shape[0])
+
             metrics_v, td_error = simple_td.update(transition_batch, return_td_error=True)
             metrics_pi = vanilla_pg.update(transition_batch, td_error)
             env.record_metrics(metrics_v)

@@ -1,5 +1,5 @@
 import jax.numpy as jnp
-from jax.lax import cond, conv
+from jax.lax import cond, conv, fori_loop
 import numpy as np
 import sys, os
 import jax
@@ -122,7 +122,8 @@ def reward(s_t, a_t, s_tp1, config):
     r_bias = -config["bias"] * config["obs_fn"](s_t, a_t, s_tp1)
     r_logp_ref = logp_ref(s_t, a_t, config)
 
-    return r_bias + r_logp_ref
+    # return r_bias + r_logp_ref
+    return 5
 
 
 def step_fn(key, s_t, a_t, config):
@@ -177,10 +178,13 @@ def metropolis():
 
 # %%
 def get_energy(lattice, dimensions):
+
     lattice = (lattice * 2) - 1
+
     kern = jnp.zeros([3]*dimensions, bool)
 
-    for n in range(dimensions): # modify it to use fori loops instead
+    def run_energy(n, init_val):
+        kern = init_val
         b = jnp.array([1]*dimensions)
         c = jnp.array([1]*dimensions)
 
@@ -189,27 +193,28 @@ def get_energy(lattice, dimensions):
 
         b = tuple(b)
         c = tuple(c)
-
-        kern = kern.at[b].set(True)
+            
+        kern = kern.at[b].set(True)        
         kern = kern.at[c].set(True)
 
+        return kern
 
-    # print(type(kern))
-    # print(type(lattice))
+    kern = fori_loop(0, dimensions, run_energy, kern)
+
     arr = -lattice * jax.scipy.signal.convolve(lattice, kern, mode='same', method="direct")
     return jnp.sum(arr)
 
 
 
 # %%
-from scipy.ndimage import convolve, generate_binary_structure
-import numpy as np
-import jax.numpy as jnp
+# from scipy.ndimage import convolve, generate_binary_structure
+# import numpy as np
+# import jax.numpy as jnp
 
 
-lattice = jnp.array([[1,1,1],[0,1,1],[1,1,0],[1,1,1]])
-# print(lattice)
-get_energy(lattice, 2)
+# lattice = jnp.array([[1,1,1],[0,1,1],[1,1,0],[1,1,1]])
+# # print(lattice)
+# get_energy(lattice, 2)
 
 
 # %%
@@ -264,8 +269,8 @@ class IsingModel(BinarySpinsSingleFlip):
         self.config = self.check_config(config)
         super().__init__(config)
 
-        self.action_space = spaces.Discrete(config["L"] + 1)
-        self.observation_space = spaces.Box(0,1,(20,))
+        self.action_space = spaces.Discrete(config["L"]**config["D"] + 1)
+        self.observation_space = spaces.Box(0,1,(config["L"]**config["D"],))
 
 
         if key is not None:
@@ -301,9 +306,7 @@ class IsingModel(BinarySpinsSingleFlip):
         constraint_reward = 0.0
         s_t = self.state
 
-        self.key, subkey = jax.random.split(self.key)
-
-        self.key, s_tp1, r_t = self.step_fn_jit(subkey, s_t, action)
+        self.key, s_tp1, r_t = self.step_fn_jit(self.key, s_t, action)
         r_t += constraint_reward
 
         action_avail = self.constraint_jit(s_t, action)

@@ -39,7 +39,7 @@ seed_pi = 786
 seed_vf = 123
 # %% INIT ENV
 rng = hk.PRNGSequence(seed_env)
-config = {"L": 20, "bias": 0, "d": 2, "D":2,"temp":0.2, "render_mode": None, "obs_fn": activity, "mean": 0}
+config = {"L": 20, "bias": 0, "d": 2, "D": 2, "temp":0.2, "render_mode": None, "obs_fn": activity, "mean": 0}
 env = IsingModel(config)
 # %%
 def func_v(S, is_training):
@@ -48,11 +48,12 @@ def func_v(S, is_training):
 
 
 def func_pi(S, is_training, config):
-    logits = hk.Linear(config["L"]+1, w_init=jnp.zeros)
+    logits = hk.Linear(config["L"]**config["D"]+1, w_init=jnp.zeros)
     return {'logits': logits(S)}
 
 # %% function approximators
 pi = coax.Policy(lambda S, is_training: func_pi(S, is_training, config), env, proba_dist=coax.proba_dists.CategoricalDist(env.action_space, gumbel_softmax_tau=0.2))
+
 vf = coax.V(func_v, env)
 # %% DEFINE THE HYPER-PARAMS
 BOOTSTRAP_N = 1
@@ -76,8 +77,8 @@ avg_rew_ests = []
 pi = coax.Policy(lambda S, is_training: func_pi(S, is_training, config), env, proba_dist=coax.proba_dists.CategoricalDist(env.action_space, gumbel_softmax_tau=0.2))
 vf = coax.V(func_v, env)
 
-simple_td = coax.td_learning.SimpleTD(vf, None,  optimizer=sgd(LR_VF), loss_function=coax.value_losses.mse) #TD UPDATER
-vanilla_pg = coax.policy_objectives.VanillaPG(pi, optimizer=sgd(LR_PI)) # POLICY-GRAD UPDATER
+simple_td = coax.td_learning.SimpleTD(vf, vf,  optimizer=optax.sgd(LR_VF), loss_function=coax.value_losses.mse) #TD UPDATER
+vanilla_pg = coax.policy_objectives.VanillaPG(pi, optimizer=optax.sgd(LR_PI)) # POLICY-GRAD UPDATER
 
 start_time = time.time()
 
@@ -86,12 +87,10 @@ for t in range(NUM_STEPS):
     a_t, logp_t = pi(s_t, return_logp=True)
     s_tp1, r_t, terminated, truncated, info = env.step(a_t)
 
-    print("r_t:", r_t)
-
     r_t = r_t - logp_t #entropy term
     rd_t = r_t - rb_t #differential reward
-
-    tracer.add(s_t, a_t, rd_t, terminated, logp=logp_t)
+    
+    tracer.add(s_t, a_t, rd_t, terminated, logp=logp_t, w=6)
 
     while tracer:
         transition_batch = tracer.pop()
@@ -101,24 +100,23 @@ for t in range(NUM_STEPS):
         assert np.allclose(transition_batch.S_next[0,:,:], states[t])
         assert np.allclose(transition_batch.Rn, reward_diff[t-1])
 
-        # print(t)
 
-        # td_error_ref_batch = transition_batch.Rn + vf(transition_batch.S_next) - vf(transition_batch.S)
+        td_error_ref_batch = transition_batch.Rn + vf(transition_batch.S_next) - vf(transition_batch.S)
+        
+        metrics_v, td_error = simple_td.update(transition_batch, return_td_error=True)
+        
+        assert np.allclose(td_error, td_error_ref_batch)
 
-        # metrics_v, td_error = simple_td.update(transition_batch, return_td_error=True)
+        metrics_pi = vanilla_pg.update(transition_batch, td_error) #advantage factor is the td_error
 
-        # assert np.allclose(td_error, td_error_ref_batch)
-
-        # metrics_pi = vanilla_pg.update(transition_batch, td_error) #advantage factor is the td_error
-
-        # rb_t = rb_t + LR_R*td_error.item() #update avg_rew_est
+        rb_t = rb_t + LR_R*td_error.item() #update avg_rew_est
 
     states.append(s_tp1)
     rewards.append(r_t)
     reward_diff.append(rd_t)
     avg_rew_ests.append(rb_t)
 
-    # avg_rew_est = np.mean(rewards)
+    avg_rew_est = np.mean(rewards)
 
     s_t = s_tp1
 
