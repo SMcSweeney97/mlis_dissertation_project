@@ -73,10 +73,16 @@ def random_initial_state(key, config):
     # Create an n-dimensional array of zeros
     desired_shape = (config["L"],) * config["D"]
     zeros_array = jnp.zeros(desired_shape)
+    
+    print(config["L"]**config["D"])
+    print(desired_shape)
 
     # Convert each element to uniformly chosen 0 or 1
     key, subkey = jax.random.split(key)  # Random number generator key
     uniform_array = jax.random.randint(subkey, shape=zeros_array.shape, minval=0, maxval=2, dtype=jnp.uint8)
+
+    print(uniform_array)
+
 
     return uniform_array
 
