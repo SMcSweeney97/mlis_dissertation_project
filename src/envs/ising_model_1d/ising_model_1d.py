@@ -28,6 +28,37 @@ from utils.utils import (
 # pylint: enable=import-error
 
 
+# def random_initial_state(key, config):
+#     """Generates a random initial state for the environment.
+#     State has at least one particle in it, so that the dark state is not created.
+
+#     Args:
+#         key (jax.random.PRNGKey): random key
+#         config (dict): configuration dictionary
+
+#     Returns:
+#         state (array): DeviceArray containing the state of the system
+#     """
+#     key, subkey = jax.random.split(key)
+
+#     num_particles = jax.random.randint(subkey, [1], 1, config["L"]**config["D"] + 1).item()
+
+#     initial_state = jnp.array([1] * num_particles + [0] * (config["L"]**config["D"] - num_particles))
+
+#     print(config["L"]**config["D"])
+#     print(num_particles)
+#     print(len(initial_state))
+
+#     key, subkey = jax.random.split(key) # add dtype argument (64)
+#     initial_state = jax.random.permutation(subkey, initial_state, independent=True)
+
+#     initial_state = jnp.reshape(initial_state,(config["L"], -1))
+
+#     print(initial_state)
+
+
+#     return initial_state
+
 def random_initial_state(key, config):
     """Generates a random initial state for the environment.
     State has at least one particle in it, so that the dark state is not created.
@@ -39,27 +70,15 @@ def random_initial_state(key, config):
     Returns:
         state (array): DeviceArray containing the state of the system
     """
-    key, subkey = jax.random.split(key)
+    # Create an n-dimensional array of zeros
+    desired_shape = (config["L"],) * config["D"]
+    zeros_array = jnp.zeros(desired_shape)
 
-    num_particles = jax.random.randint(subkey, [1], 1, config["L"]**config["D"] + 1).item()
+    # Convert each element to uniformly chosen 0 or 1
+    key, subkey = jax.random.split(key)  # Random number generator key
+    uniform_array = jax.random.randint(subkey, shape=zeros_array.shape, minval=0, maxval=2, dtype=jnp.uint8)
 
-    initial_state = jnp.array([1] * num_particles + [0] * (config["L"]**config["D"] - num_particles))
-
-    print(config["L"]**config["D"])
-    print(num_particles)
-    print(len(initial_state))
-
-    key, subkey = jax.random.split(key) # add dtype argument (64)
-    initial_state = jax.random.permutation(subkey, initial_state, independent=True)
-
-    initial_state = jnp.reshape(initial_state,(config["L"], -1))
-
-    print(initial_state)
-
-
-    return initial_state
-
-
+    return uniform_array
 
 
 def constraint(state, action):
