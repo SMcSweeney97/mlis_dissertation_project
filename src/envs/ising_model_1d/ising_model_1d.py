@@ -147,8 +147,9 @@ def reward(s_t, a_t, s_tp1, config):
     r_bias = -config["bias"] * config["obs_fn"](s_t, a_t, s_tp1)
     r_logp_ref = logp_ref(s_t, a_t, config)
 
-    # return r_bias + r_logp_ref
-    return 5
+    print("Reward: ", r_bias + r_logp_ref)
+    
+    return r_bias + r_logp_ref
 
 
 def step_fn(key, s_t, a_t, config):
@@ -168,38 +169,44 @@ def step_fn(key, s_t, a_t, config):
 
     key, subkey = jax.random.split(key)
 
-    def true_cond(s_t, a_t, s_tp1, config):
-        s_t = s_tp1
-        r_t = reward(s_t, a_t, s_tp1, config)
+    def true_cond(variables):
+        s_t, a_t, s_tp1 = variables
+    
+        return s_tp1, reward(s_t, a_t, s_tp1, config)
 
-        return s_t, r_t
+    def false_cond(variables):
+        s_t, a_t, s_tp1 = variables
+        
+        return s_t, reward(s_t, config["L"], s_tp1, config)
 
-    def false_cond(s_t, a_t, s_tp1, config):
-        s_tp1 = s_t
-        r_t = reward(s_t, config["L"], s_tp1, config)
+    
+    print(reward_components(s_t, a_t, s_tp1, config))
 
-        return s_tp1, r_t
 
 
     G = ((energy_difference > 0) & (jax.random.uniform(subkey) < jnp.exp(-config["temp"]*energy_difference))) | (energy_difference <= 0)
-    s_tp1 = G*s_tp1 -(G-1)*s_t
-    r_t = G*reward(s_t, a_t, s_tp1, config) -(G-1)* reward(s_t, config["L"], s_tp1, config)
-
-    # s_tp1, r_t = cond(
-    #     True,
-    #     true_cond,
-    #     false_cond,
-
-    #     s_t, a_t, s_tp1, config
-    # )
-
-
+    # s_tp1 = G*s_tp1 -(G-1)*s_t
+    # r_t = G*reward(s_t, a_t, s_tp1, config) -(G-1)* reward(s_t, config["L"], s_tp1, config)
+    
+    # G = jnp.logical_and(energy_difference > 0, (jax.random.uniform(subkey) < jnp.exp(-config["temp"]*energy_difference)))
+    
+    print("G: ", G)
+    
+    print("s_t", s_t)
+    print("a_t", a_t)
+    print("s_tp1", s_tp1)
+    print("config", config)
+    
+    
+    s_, r_t = cond(
+        G,
+        true_cond,
+        false_cond,
+        (s_t, a_t, s_tp1)
+        
+    )
+    
     return key, s_tp1, r_t
-
-def metropolis():
-
-
-    return
 
 # %%
 def get_energy(lattice, dimensions):
@@ -228,19 +235,6 @@ def get_energy(lattice, dimensions):
 
     arr = -lattice * jax.scipy.signal.convolve(lattice, kern, mode='same', method="direct")
     return jnp.sum(arr)
-
-
-
-# %%
-# from scipy.ndimage import convolve, generate_binary_structure
-# import numpy as np
-# import jax.numpy as jnp
-
-
-# lattice = jnp.array([[1,1,1],[0,1,1],[1,1,0],[1,1,1]])
-# # print(lattice)
-# get_energy(lattice, 2)
-
 
 # %%
 def policy_ref(key, state, config):

@@ -76,7 +76,11 @@ def constraint(state, action):
         cond_left_spin_up = jnp.array_equiv(
             state[(action - 1) % len(state)], 1
         )  # the local constraint to enable flips
+        
+        print("_pred: ", cond_left_spin_up)
         return cond_left_spin_up
+
+    print("Cond: ", cond_action_is_no_flip)
 
     possible = cond(
         cond_action_is_no_flip,

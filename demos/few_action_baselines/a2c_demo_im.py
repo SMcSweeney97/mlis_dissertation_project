@@ -84,6 +84,7 @@ start_time = time.time()
 
 for t in range(NUM_STEPS):
 
+
     a_t, logp_t = pi(s_t, return_logp=True)
     s_tp1, r_t, terminated, truncated, info = env.step(a_t)
 
@@ -111,6 +112,7 @@ for t in range(NUM_STEPS):
 
         rb_t = rb_t + LR_R*td_error.item() #update avg_rew_est
 
+    print(r_t)
     states.append(s_tp1)
     rewards.append(r_t)
     reward_diff.append(rd_t)
