@@ -74,7 +74,7 @@ LR_VF = 1e-4
 LR_R = 1e-4
 tracer = coax.reward_tracing.NStep(n=1, gamma=DISCOUNT) #stores (R_t^n, I_t^n, S_t+n, R_t+n)
 # %% RUN A TEST LOOP WITH ASSERTIONS ETC.
-NUM_STEPS=10
+NUM_STEPS=1000
 s_0, _ = env.reset()
 tracer.reset()
 s_0 = env.state
@@ -147,7 +147,7 @@ time_per_step = loop_time/NUM_STEPS
 print(f"{loop_time:.2f}s for {NUM_STEPS} steps")
 
 # %% RUN A FULL LOOP.
-NUM_STEPS=10
+NUM_STEPS=1000
 OBS_FREQ = 1 #How often to store rewards etc for visualisation
 s_0, _ = env.reset()
 tracer.reset()
@@ -155,7 +155,12 @@ s_0 = env.state
 s_t = s_0
 rb_t = 0.0 #Estimate of the average-reward per time-step
 
-pi = coax.Policy(lambda S, is_training: func_pi(S, is_training, config), env, proba_dist=coax.proba_dists.CategoricalDist(env.action_space, gumbel_softmax_tau=0.2))
+
+pi = coax.Policy(lambda S, is_training: func_pi(S, is_training, config), env, proba_dist=coax.proba_dists.NormalDist(env.observation_space, clip_box=(-256.0, 256.0), clip_reals=(-30.0, 30.0), clip_logvar=(-20.0, 20.0)))
+
+
+
+#pi = coax.Policy(lambda S, is_training: func_pi(S, is_training, config), env, proba_dist=coax.proba_dists.CategoricalDist(env.action_space, gumbel_softmax_tau=0.2))
 vf = coax.V(func_v, env)
 
 # simple_td = coax.td_learning.SimpleTD(vf, None,  optimizer=sgd(LR_VF), loss_function=coax.value_losses.mse) #TD UPDATER
@@ -173,6 +178,8 @@ start_time = time.time()
 for t in range(NUM_STEPS):
 
     a_t, logp_t = pi(s_t, return_logp=True)
+    a_t= jnp.floor(a_t+0.5)
+    a_t=a_t.astype(int)
     s_tp1, r_t, terminated, truncated, info = env.step(a_t)
 
     r_t = r_t - logp_t #entropy term
