@@ -42,17 +42,28 @@ rng = hk.PRNGSequence(seed_env)
 config = {"L": 20, "bias": 0, "d": 2, "D": 2, "temp":0.2, "render_mode": None, "obs_fn": activity, "mean": 0}
 env = IsingModel(config)
 # %%
-def func_v(S, is_training): #if gaussian instead of sequential should be a dict of mew and sigma
+def func_v(S, is_training): 
     value = hk.Sequential((hk.Linear(1, w_init=jnp.zeros), jnp.ravel))
     return value(S)
-
+#if gaussian instead of sequential should be a dict of mew and sigma
 
 def func_pi(S, is_training, config):
-    logits = hk.Linear(config["L"]**config["D"]+1, w_init=jnp.zeros)
-    return {'logits': logits(S)}
+    logvar = hk.Sequential((
+        hk.Flatten(),
+        hk.Linear(8), jax.nn.relu,
+        hk.Linear(8), jax.nn.relu,
+        hk.Linear(8), jax.nn.relu,
+        hk.Linear(config["L"]**config["D"], w_init=jnp.zeros)))
+    mu = hk.Sequential((
+        hk.Flatten(),
+        hk.Linear(8), jax.nn.relu,
+        hk.Linear(8), jax.nn.relu,
+        hk.Linear(8), jax.nn.relu,
+        hk.Linear(config["L"]**config["D"], w_init=jnp.zeros)))
+    return {'logvar': logvar(S),'mu': mu(S)}
 
 # %% function approximators
-pi = coax.Policy(lambda S, is_training: func_pi(S, is_training, config), env, proba_dist=coax.proba_dists.CategoricalDist(env.action_space, gumbel_softmax_tau=0.2))
+pi = coax.Policy(lambda S, is_training: func_pi(S, is_training, config), env, proba_dist=coax.proba_dists.NormalDist(env.observation_space, clip_box=(-256.0, 256.0), clip_reals=(-30.0, 30.0), clip_logvar=(-20.0, 20.0)))
 
 vf = coax.V(func_v, env)
 # %% DEFINE THE HYPER-PARAMS
@@ -74,7 +85,9 @@ s_t = s_0
 rb_t = 0.0 #Estimate of the average-reward per time-step
 avg_rew_ests = []
 
-pi = coax.Policy(lambda S, is_training: func_pi(S, is_training, config), env, proba_dist=coax.proba_dists.CategoricalDist(env.action_space, gumbel_softmax_tau=0.2))
+#pi = coax.Policy(lambda S, is_training: func_pi(S, is_training, config), env, proba_dist=coax.proba_dists.CategoricalDist(env.action_space, gumbel_softmax_tau=0.2))
+pi = coax.Policy(lambda S, is_training: func_pi(S, is_training, config), env, proba_dist=coax.proba_dists.NormalDist(env.observation_space, clip_box=(-256.0, 256.0), clip_reals=(-30.0, 30.0), clip_logvar=(-20.0, 20.0)))
+
 vf = coax.V(func_v, env)
 
 simple_td = coax.td_learning.SimpleTD(vf, vf,  optimizer=optax.sgd(LR_VF), loss_function=coax.value_losses.mse) #TD UPDATER
@@ -85,6 +98,15 @@ start_time = time.time()
 for t in range(NUM_STEPS):
 
     a_t, logp_t = pi(s_t, return_logp=True)
+    
+    a_t= jnp.floor(a_t+0.5)
+    a_t=a_t.astype(int)
+    # a_t = jax.nn.sigmoid(a_t)
+
+    # a_t = jnp.where(a_t.astype(bool))
+    print("HERE")
+    print(a_t)
+    print(type(a_t))
     s_tp1, r_t, terminated, truncated, info = env.step(a_t)
 
     r_t = r_t - logp_t #entropy term

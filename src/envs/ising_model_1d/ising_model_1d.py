@@ -243,28 +243,28 @@ def get_energy(lattice, dimensions):
 
 
 # %%
-def policy_ref(key, state, config):
-    """Reference policy for the few-action EM.
-    A site is selected at random, uniformly.
-    If it can flip, it does.
-    Otherwise no action is performed
-    """
+# def policy_ref(key, state, config):
+#     """Reference policy for the few-action EM.
+#     A site is selected at random, uniformly.
+#     If it can flip, it does.
+#     Otherwise no action is performed
+#     """
 
-    key, subkey = jax.random.split(key)
+#     key, subkey = jax.random.split(key)
 
-    L = config["L"]
-    site_idx = jax.random.randint(
-        subkey, (1,), 0, L
-    )  # choose site at random with equal prob
-    has_left = state[
-        (site_idx - 1) % L
-    ]  # action avail if site has left spin up (i.e. occupied)
+#     L = config["L"]
+#     site_idx = jax.random.randint(
+#         subkey, (1,), 0, L
+#     )  # choose site at random with equal prob
+#     has_left = state[
+#         (site_idx - 1) % L
+#     ]  # action avail if site has left spin up (i.e. occupied)
 
-    action = jnp.where(has_left, site_idx, L)
+#     action = jnp.where(has_left, site_idx, L)
 
-    logp = logp_ref(state, action, config)
+#     logp = logp_ref(state, action, config)
 
-    return logp, (action, key)
+#     return logp, (action, key)
 
 
 class IsingModel(BinarySpinsSingleFlip):
@@ -308,7 +308,7 @@ class IsingModel(BinarySpinsSingleFlip):
         # JIT THE STEP, REFERENCE DYNAMICS AND PRED_ACTION_IS_AVAILABLE
         self.step_fn_jit = fix_config_and_jit(step_fn, config)
         self.constraint_jit = jax.jit(constraint)
-        self.policy_ref_jit = fix_config_and_jit(policy_ref, config)
+        #self.policy_ref_jit = fix_config_and_jit(policy_ref, config)
 
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
