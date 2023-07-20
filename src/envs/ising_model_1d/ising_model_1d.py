@@ -147,8 +147,8 @@ def reward(s_t, a_t, s_tp1, config):
     r_bias = -config["bias"] * config["obs_fn"](s_t, a_t, s_tp1)
     r_logp_ref = logp_ref(s_t, a_t, config)
 
-    # return r_bias + r_logp_ref
-    return 5
+    return r_bias + r_logp_ref
+    # return 5
 
 
 def step_fn(key, s_t, a_t, config):
