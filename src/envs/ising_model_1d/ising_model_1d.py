@@ -168,30 +168,25 @@ def step_fn(key, s_t, a_t, config):
 
     key, subkey = jax.random.split(key)
 
-    def true_cond(s_t, a_t, s_tp1, config):
-        s_t = s_tp1
-        r_t = reward(s_t, a_t, s_tp1, config)
+    def true_cond(variables):
+        s_t, a_t, s_tp1 = variables
 
-        return s_t, r_t
+        return s_tp1, reward(s_t, a_t, s_tp1, config)
 
-    def false_cond(s_t, a_t, s_tp1, config):
-        s_tp1 = s_t
-        r_t = reward(s_t, config["L"], s_tp1, config)
+    def false_cond(variables):
+        s_t, a_t, s_tp1 = variables
 
-        return s_tp1, r_t
+        return s_t, reward(s_t, config["L"], s_tp1, config)
 
 
     G = ((energy_difference > 0) & (jax.random.uniform(subkey) < jnp.exp(-config["temp"]*energy_difference))) | (energy_difference <= 0)
-    s_tp1 = G*s_tp1 -(G-1)*s_t
-    r_t = G*reward(s_t, a_t, s_tp1, config) -(G-1)* reward(s_t, config["L"], s_tp1, config)
-
-    # s_tp1, r_t = cond(
-    #     True,
-    #     true_cond,
-    #     false_cond,
-
-    #     s_t, a_t, s_tp1, config
-    # )
+    
+    s_tp1, r_t = cond(
+        G,
+        true_cond,
+        false_cond,
+        (s_t, a_t, s_tp1)
+    )
 
 
     return key, s_tp1, r_t
