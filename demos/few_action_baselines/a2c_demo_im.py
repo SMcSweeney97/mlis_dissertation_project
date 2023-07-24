@@ -4,6 +4,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', "..", "stat-mech-g
 
 import jax.numpy as jnp
 import jax
+from jax.lax import fori_loop, cond, while_loop
 import haiku as hk
 import matplotlib.pyplot as plt
 import numpy as np
@@ -95,15 +96,37 @@ vanilla_pg = coax.policy_objectives.VanillaPG(pi, optimizer=optax.sgd(LR_PI)) # 
 
 start_time = time.time()
 
+
+key, subkey = jax.random.split(next(rng))  # Random number generator key
+
 for t in range(NUM_STEPS):
 
     a_t, logp_t = pi(s_t, return_logp=True)
     
+    # logp_t_sum = jnp.sum(logp_t)
+    
+    # def rng_sampling(n, init_val):
+    #     currentVal, sum_rng, a_t, logp_t, logp_t_sum = init_val
+            
+    #     currentVal += logp_t[n]
+        
+    # def cond_rng():
+        
+    #     if (currentVal > rng):
+    #         return a_t[n], logp_t[n]
+        
+
+    # currentVal = 0
+    # sum_rng = jax.random.randint(subkey, shape=(1,), minval=0, maxval=logp_t_sum, dtype=jnp.uint8)
+
+    # a_t, logp_t = while_loop(0, len(a_t), rng_sampling, (currentVal, sum_rng, a_t, logp_t, logp_t_sum))
+    
+    
     a_t= jnp.floor(a_t+0.5)
     a_t=a_t.astype(int)
-    # a_t = jax.nn.sigmoid(a_t)
+    a_t = jax.nn.sigmoid(a_t)
 
-    # a_t = jnp.where(a_t.astype(bool))
+    a_t = jnp.where(a_t.astype(bool))
     print("HERE")
     print(a_t)
     print(type(a_t))
