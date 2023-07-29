@@ -224,7 +224,7 @@ def step_fn(key, s_t, a_t, config):
     """This determinisitc step_fn simply applies the indicated single-site spin-flip.
     The reward_fn computes the log-prob of this action under a Metropolis Hastings Dynamics in the reward.
     For bias=0, subtracting the entropy of the policy from the reward gives the KL-divergence between the policy
-     and the MH-MCMC reference dynamics.
+    and the MH-MCMC reference dynamics.
     """
 
     s_tp1 = update_one_flip_action_linear(s_t, a_t)
@@ -259,6 +259,57 @@ def get_energy(lattice, dimensions):
 
     arr = -lattice * jax.scipy.signal.convolve(lattice, kern, mode='same', method="direct")
     return jnp.sum(arr)
+
+# %%
+def period_boundary_get_energy(lattice, dimensions):
+
+    lattice = (lattice * 2) - 1
+    extended_lattice = jnp.pad(lattice, 1, mode="constant")
+
+    kern = jnp.zeros([3]*dimensions, bool)
+
+    def run_energy(n, init_val):
+        d, kern, extended_lattice = init_val
+        b = jnp.array([1]*dimensions)
+        c = jnp.array([1]*dimensions)
+
+        d = b
+                
+        b = b.at[n].add(-1)
+        c = c.at[n].add(1)
+
+        b = tuple(b)
+        c = tuple(c)
+
+        kern = kern.at[b].set(True)
+        kern = kern.at[c].set(True)
+        
+        print(kern)
+        
+
+        return d, kern, extended_lattice
+
+    d = jnp.array([1]*dimensions)
+    d, kern, extended_lattice = fori_loop(0, dimensions, run_energy, (d, kern, extended_lattice))
+    
+    print(d)
+    # print(lattice)
+    print(extended_lattice)
+
+    # arr = -lattice * jax.scipy.signal.convolve(lattice, kern, mode='same', method="direct")
+    # return jnp.sum(arr)
+    return
+
+# %%
+from scipy.ndimage import convolve, generate_binary_structure
+import numpy as np
+import jax.numpy as jnp
+from jax.lax import cond, fori_loop
+
+lattice = jnp.array([[1,1,1],[0,1,1],[1,1,0],[1,1,1]])
+# lattice = jnp.array([[[1,1,1],[0,1,1],[1,1,0],[1,1,1]],[[1,1,1],[0,1,1],[1,1,0],[1,1,1]],[[1,1,1],[0,1,1],[1,1,0],[1,1,1]]])
+
+period_boundary_get_energy(lattice, 2)
 
 # %%
 def policy_ref(key, state, config):
