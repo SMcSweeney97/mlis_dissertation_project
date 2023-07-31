@@ -99,6 +99,7 @@ def activity(s_t, a_t, s_tp1):
 
 def magnetisation(s_t, a_t, s_tp1):
     """Computes the average spin-magnetisation for s_t"""
+    # counts number of spins
     return jnp.mean(2*(s_t - 0.5))
 
 def logp_state_proposal(s_t, s_tp1, config):
@@ -115,7 +116,7 @@ def logp_state_proposal_vmapped(s_t, batch_s_tp1, config):
     """vmapped version of logp_state_proposal over s_tp1 -> batch_s_tp1
     Use to compute phi(s'|s) over a batch of s' (e.g. all possible s -> s')
     """
-    fun_vmapped = vmap(lambda new_state: logp_state_proposal(s_t, new_state, config))
+    fun_vmapped = vmap(lambda new_state: logp_state_proposal(s_t, new_state, config)) # maps the function to a batch of new states
     res = fun_vmapped(batch_s_tp1)
     return res
 
@@ -272,6 +273,8 @@ def period_boundary_get_energy(lattice, dimensions):
         d, kern, extended_lattice = init_val
         b = jnp.array([1]*dimensions)
         c = jnp.array([1]*dimensions)
+        
+        # np.take() # commented this out as its not right yet
 
         d = b
                 
@@ -299,6 +302,31 @@ def period_boundary_get_energy(lattice, dimensions):
     # arr = -lattice * jax.scipy.signal.convolve(lattice, kern, mode='same', method="direct")
     # return jnp.sum(arr)
     return
+
+# %%
+# import jax.numpy as np
+# import jax.random as random
+# from jax import jit,vmap
+# from jax.ops import index_update
+# from jax.lax import fori_loop
+# import numpy as onp
+# from functools import partial
+# import itertools as it
+# N = 30
+
+# marg_1 = lambda i,x:x[i]
+# marg_2 = lambda i,j,x:x[i]*x[j]
+
+# marg_1s = [jit(partial(marg_1,i)) for i in range(N)]
+# marg_2s = [jit(partial(marg_2,i,j)) for i,j in list(it.combinations(range(N),r=2))]
+# funcs = marg_1s+marg_2s
+
+# @jit
+# def calc_e(factors,word):
+#     return np.sum(factors*np.array([func(word) for func in funcs]))
+
+# factors = np.array(onp.random.randn(len(funcs)))
+
 
 # %%
 from scipy.ndimage import convolve, generate_binary_structure
