@@ -4,7 +4,7 @@ import os, sys
 from fix_pathing import root_dir
 
 from src.utils.animation import make_animation_vertical, make_animation_horizontal
-from src.envs.ising_model_1d.ising_model import IsingModel, activity, magnetisation, get_possible_states, logp_state_proposal_vmapped, log_ratio_target_dist, logp_acceptance_vmapped
+from src.envs.ising_model_1d.ising_model import IsingModel, activity, magnetisation, get_possible_states, logp_state_proposal_vmapped, log_ratio_target_dist, logp_acceptance_vmapped, get_energy
 
 from src.utils.plotting import render_spin_trajectory, plot_learning_curve
 import haiku as hk
@@ -24,8 +24,15 @@ import seaborn as sns
 # %% INIT ENV
 rng = hk.PRNGSequence(456)
 env_seed = 123
-config = {"L": 8, "bias": 0, "d": 2, "D":2,"temp":0.2, "render_mode": None, "obs_fn": activity, "mean": 0}
+config = {"L": 4, "bias": 0, "d": 2, "D":2,"temp":0.2, "render_mode": None, "obs_fn": activity, "mean": 0}
 env = IsingModel(config, seed=env_seed)
+# %% TEST ENERGY FUNCTION
+
+state, _ = env.reset()
+
+print(state)
+print(get_energy(state, 2))
+
 # %% ISING - EXPLICIT TEST OF MCMC STEP FOR DIAGNOSTICS
 
 NUM_STEPS = 1
@@ -83,7 +90,7 @@ est_time_full_run = time_per_step * 10**6 / 3600  # time for 1 million steps in 
 print(f"{loop_time*1000:.2f}", "ms")
 # %% ISING
 
-NUM_STEPS = 10000
+NUM_STEPS = 100000
 start_time = time.time()
 
 (
@@ -143,8 +150,8 @@ for i in range(0, num_snapshots):
         axs[1][i].imshow(np.zeros_like(states_cache[0]))
 # %% Policy Magnetisation. 2D Ising model has phase transition around T = 2.
 # For infinite size system, below this mag = 1, above this mag = 0
-plot_learning_curve(magnetisation_cache)
-plt.title(f"T = {1/config['temp']:.2f}, M = {np.mean(magnetisation_cache[600::])}", fontsize=20)
+plot_learning_curve(np.abs(magnetisation_cache))
+plt.title(f"T = {1/config['temp']:.2f}, M = {np.mean(np.absolute(magnetisation_cache)[600::])}", fontsize=20)
 plt.show()
 
 # %% PLOT CUMULATIVE MEAN OF REWARDS
