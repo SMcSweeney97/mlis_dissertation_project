@@ -220,8 +220,10 @@ for i in range(0, num_snapshots):
 # For infinite size system, below this mag = 1, above this mag = 0
 exact_result = (mag_df[mag_df["T"]==1/config["temp"]])["M"]
 plot_learning_curve(np.abs(magnetisation_cache))
+plt.plot([], [], "r-", linewidth=4, label="MCMC")
 plt.title(f"T = {1/config['temp']:.2f}, M = {np.mean(np.absolute(magnetisation_cache)[600::])}", fontsize=20)
-plt.hlines(exact_result, 0, len(magnetisation_cache), label="Exact")
+plt.hlines(exact_result, 0, len(magnetisation_cache), label="Exact", linewidth=4, linestyle="dashed")
+plt.legend(fontsize=20)
 plt.show()
 # %%
 
@@ -229,5 +231,5 @@ fig, ax = plt.subplots(1, 1)
 
 ax.plot(temps, expected_mags_batch, "b^--", label="Exact")
 ax.plot([1/config["temp"]], [np.mean(np.absolute(magnetisation_cache)[600::])], "ks", label="MCMC")
-
+ax.legend()
 # %%
