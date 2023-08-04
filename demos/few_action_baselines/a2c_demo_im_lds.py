@@ -46,8 +46,20 @@ def func_v(S, is_training):
     return jnp.ravel(value(S))
 
 def func_pi(S, is_training, config):
-    logits = hk.nets.MLP(output_sizes=[4,config["L"]**config["D"]+1], w_init=jnp.zeros, b_init=jnp.zeros)
-    return {'logits': logits(S)}
+    logvar = hk.Sequential((
+        hk.Flatten(),
+        hk.Linear(8), jax.nn.relu,
+        hk.Linear(8), jax.nn.relu,
+        hk.Linear(8), jax.nn.relu,
+        hk.Linear(config["L"]**config["D"], w_init=jnp.zeros)))
+    mu = hk.Sequential((
+        hk.Flatten(),
+        hk.Linear(8), jax.nn.relu,
+        hk.Linear(8), jax.nn.relu,
+        hk.Linear(8), jax.nn.relu,
+        hk.Linear(config["L"]**config["D"], w_init=jnp.zeros)))
+    return {'logvar': logvar(S),'mu': mu(S)}
+
 # %% DEFINE THE HYPER-PARAMS
 BOOTSTRAP_N = 1
 DISCOUNT = 1
@@ -73,7 +85,7 @@ entropies = []
 mags = []
 activities = []
 
-pi = coax.Policy(lambda S, is_training: func_pi(S, is_training, config), env, proba_dist=coax.proba_dists.CategoricalDist(env.action_space, gumbel_softmax_tau=0.2), random_seed=seed_pi)
+pi = coax.Policy(lambda S, is_training: func_pi(S, is_training, config), env, proba_dist=coax.proba_dists.NormalDist(env.observation_space, clip_box=(-256.0, 256.0), clip_reals=(-30.0, 30.0), clip_logvar=(-20.0, 20.0)))
 vf = coax.V(func_v, env, random_seed=seed_vf)
 
 simple_td = coax.td_learning.SimpleTD(vf, vf,  optimizer=optax.adam(learning_rate=LR_VF), loss_function=coax.value_losses.mse) #TD UPDATER
@@ -89,6 +101,7 @@ start_time = time.time()
 for t in range(NUM_STEPS):
 
     a_t, logp_t = pi(s_t, return_logp=True)
+    a_t = a_t.astype(int)
     s_tp1, r_t, terminated, truncated, info = env.step(a_t)
 
     actions.append(a_t)
