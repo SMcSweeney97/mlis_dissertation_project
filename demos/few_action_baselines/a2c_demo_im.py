@@ -53,13 +53,13 @@ def func_pi(S, is_training, config):
         hk.Linear(8), jax.nn.relu,
         hk.Linear(8), jax.nn.relu,
         hk.Linear(8), jax.nn.relu,
-        hk.Linear(config["L"]**config["D"], w_init=jnp.zeros), jax.nn.softmax))
+        hk.Linear(config["L"]**config["D"], w_init=jnp.zeros)))
     mu = hk.Sequential((
         hk.Flatten(),
         hk.Linear(8), jax.nn.relu,
         hk.Linear(8), jax.nn.relu,
         hk.Linear(8), jax.nn.relu,
-        hk.Linear(config["L"]**config["D"], w_init=jnp.zeros), jax.nn.softmax))
+        hk.Linear(config["L"]**config["D"], w_init=jnp.zeros)))
     return {'logvar': logvar(S),'mu': mu(S)}
 
 # %% function approximators
