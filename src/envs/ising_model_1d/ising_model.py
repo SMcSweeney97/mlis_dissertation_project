@@ -56,7 +56,7 @@ def random_initial_state(key, config):
 
     # Convert each element to uniformly chosen 0 or 1
     key, subkey = jax.random.split(key)  # Random number generator key
-    uniform_array = jax.random.randint(subkey, shape=desired_shape, minval=0, maxval=2, dtype=jnp.uint8)
+    uniform_array = jax.random.randint(subkey, shape=desired_shape, minval=0, maxval=2, dtype=jnp.int64)
 
     return uniform_array
 
@@ -234,32 +234,48 @@ def step_fn(key, s_t, a_t, config):
     return key, s_tp1, r_t
 
 # %%
-def get_energy(lattice, dimensions):
+def get_energy(state, dimensions):
 
-    lattice = (lattice * 2) - 1
+    interaction_strength = 1 #J
 
-    kern = jnp.zeros([3]*dimensions, bool)
+    tmp  = 2*state - 1
+    roll_rows = jnp.roll(tmp, 1, axis=0)
+    roll_cols = jnp.roll(tmp, 1, axis=1)
 
-    def run_energy(n, init_val):
-        kern = init_val
-        b = jnp.array([1]*dimensions)
-        c = jnp.array([1]*dimensions)
+    tmp1 = tmp*roll_rows #gives the col interactions
+    tmp2 = tmp*roll_cols #gives the row interactions
 
-        b = b.at[n].add(-1)
-        c = c.at[n].add(1)
+    energy = -interaction_strength*jnp.sum(tmp1 + tmp2)
 
-        b = tuple(b)
-        c = tuple(c)
+    return energy
 
-        kern = kern.at[b].set(True)
-        kern = kern.at[c].set(True)
+# %%
+# def get_energy(lattice, dimensions):
 
-        return kern
+#     lattice = (lattice * 2) - 1
 
-    kern = fori_loop(0, dimensions, run_energy, kern)
+#     kern = jnp.zeros([3]*dimensions, bool)
 
-    arr = -lattice * jax.scipy.signal.convolve(lattice, kern, mode='same', method="direct")
-    return jnp.sum(arr)
+#     def run_energy(n, init_val):
+#         kern = init_val
+#         b = jnp.array([1]*dimensions)
+#         c = jnp.array([1]*dimensions)
+
+#         b = b.at[n].add(-1)
+#         c = c.at[n].add(1)
+
+#         b = tuple(b)
+#         c = tuple(c)
+
+#         kern = kern.at[b].set(True)
+#         kern = kern.at[c].set(True)
+
+#         return kern
+
+#     kern = fori_loop(0, dimensions, run_energy, kern)
+
+#     arr = -lattice * jax.scipy.signal.convolve(lattice, kern, mode='same', method="direct")
+#     return jnp.sum(arr)
 
 # %%
 def period_boundary_get_energy(lattice, dimensions):
