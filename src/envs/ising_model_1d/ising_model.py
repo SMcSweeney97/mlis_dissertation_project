@@ -281,19 +281,14 @@ def get_energy(state, dimensions):
 def period_boundary_get_energy(lattice, dimensions):
 
     lattice = (lattice * 2) - 1
-    extended_lattice = jnp.pad(lattice, 1, mode="constant")
-
+    extended_lattice = jnp.pad(lattice, 1, mode="wrap")
     kern = jnp.zeros([3]*dimensions, bool)
 
     def run_energy(n, init_val):
-        d, kern, extended_lattice = init_val
+        kern = init_val
         b = jnp.array([1]*dimensions)
         c = jnp.array([1]*dimensions)
-
-        # np.take() # commented this out as its not right yet
-
-        d = b
-
+        
         b = b.at[n].add(-1)
         c = c.at[n].add(1)
 
@@ -302,58 +297,35 @@ def period_boundary_get_energy(lattice, dimensions):
 
         kern = kern.at[b].set(True)
         kern = kern.at[c].set(True)
+        
+        return kern
 
-        print(kern)
+    kern = fori_loop(0, dimensions, run_energy, kern)
 
-
-        return d, kern, extended_lattice
-
-    d = jnp.array([1]*dimensions)
-    d, kern, extended_lattice = fori_loop(0, dimensions, run_energy, (d, kern, extended_lattice))
-
-    print(d)
-    # print(lattice)
+    print(kern)
+    print(lattice)
     print(extended_lattice)
 
-    # arr = -lattice * jax.scipy.signal.convolve(lattice, kern, mode='same', method="direct")
-    # return jnp.sum(arr)
-    return
+    arr = -lattice * jax.scipy.signal.convolve(extended_lattice, kern, mode='valid', method="direct")
+    print(arr)
+    return jnp.sum(arr)/2
 
 # %%
-# import jax.numpy as np
-# import jax.random as random
-# from jax import jit,vmap
-# from jax.ops import index_update
-# from jax.lax import fori_loop
-# import numpy as onp
-# from functools import partial
-# import itertools as it
-# N = 30
-
-# marg_1 = lambda i,x:x[i]
-# marg_2 = lambda i,j,x:x[i]*x[j]
-
-# marg_1s = [jit(partial(marg_1,i)) for i in range(N)]
-# marg_2s = [jit(partial(marg_2,i,j)) for i,j in list(it.combinations(range(N),r=2))]
-# funcs = marg_1s+marg_2s
-
-# @jit
-# def calc_e(factors,word):
-#     return np.sum(factors*np.array([func(word) for func in funcs]))
-
-# factors = np.array(onp.random.randn(len(funcs)))
 
 
 # %%
+import jax
 from scipy.ndimage import convolve, generate_binary_structure
 import numpy as np
 import jax.numpy as jnp
 from jax.lax import cond, fori_loop
 
-lattice = jnp.array([[1,1,1],[0,1,1],[1,1,0],[1,1,1]])
+lattice = jnp.array([[1,0,1],[0,1,1],[1,1,0],[0,1,0]])
+# lattice = jnp.array([[1,1],[1,1]])
 # lattice = jnp.array([[[1,1,1],[0,1,1],[1,1,0],[1,1,1]],[[1,1,1],[0,1,1],[1,1,0],[1,1,1]],[[1,1,1],[0,1,1],[1,1,0],[1,1,1]]])
 
-period_boundary_get_energy(lattice, 2)
+print(period_boundary_get_energy(lattice, 2))
+print(get_energy(lattice))
 
 # %%
 def policy_ref(key, state, config):
