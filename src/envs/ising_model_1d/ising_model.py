@@ -263,7 +263,15 @@ def get_energy(lattice, dimensions):
 
 # %%
 def period_boundary_get_energy(lattice, dimensions):
+    """Computes energy level for a given lattice of n dimensions
 
+    Args:
+        lattice array: Lattice of (0 and 1) or (-1 and 1)
+        dimension int: Integer relating to the number of dimensions of the lattice
+
+    Returns:
+        int: Sum of the energy within the given lattice divided by 2 for twiddled 
+    """
     lattice = (lattice * 2) - 1
     extended_lattice = jnp.pad(lattice, 1, mode="wrap")
     kern = jnp.zeros([3]*dimensions, bool)
