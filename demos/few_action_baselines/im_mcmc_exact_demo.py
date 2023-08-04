@@ -26,7 +26,7 @@ import pandas as pd
 # %% INIT ENV
 rng = hk.PRNGSequence(456)
 env_seed = 123
-config = {"L": 2, "bias": 0, "d": 2, "D":2, "temp":1, "render_mode": None, "obs_fn": activity, "mean": 0}
+config = {"L": 2, "bias": 0, "d": 2, "D":2, "temp":0.5, "render_mode": None, "obs_fn": activity, "mean": 0}
 env = IsingModel(config, seed=env_seed)
 # %% EXACT PROBS - only run this for small systems...
 
