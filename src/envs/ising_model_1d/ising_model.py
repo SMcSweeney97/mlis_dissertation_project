@@ -286,7 +286,7 @@ def period_boundary_get_energy(lattice, dimensions):
         dimension int: Integer relating to the number of dimensions of the lattice
 
     Returns:
-        int: Sum of the energy within the given lattice divided by 2 for twiddled 
+        int: Sum of the energy within the given lattice divided by 2 for twiddled
     """
     lattice = (lattice * 2) - 1
     extended_lattice = jnp.pad(lattice, 1, mode="wrap")
@@ -296,7 +296,7 @@ def period_boundary_get_energy(lattice, dimensions):
         kern = init_val
         b = jnp.array([1]*dimensions)
         c = jnp.array([1]*dimensions)
-        
+
         b = b.at[n].add(-1)
         c = c.at[n].add(1)
 
@@ -305,7 +305,7 @@ def period_boundary_get_energy(lattice, dimensions):
 
         kern = kern.at[b].set(True)
         kern = kern.at[c].set(True)
-        
+
         return kern
 
     kern = fori_loop(0, dimensions, run_energy, kern)
@@ -332,8 +332,8 @@ lattice = jnp.array([[1,0,1],[0,1,1],[1,1,0],[0,1,0]])
 # lattice = jnp.array([[1,1],[1,1]])
 # lattice = jnp.array([[[1,1,1],[0,1,1],[1,1,0],[1,1,1]],[[1,1,1],[0,1,1],[1,1,0],[1,1,1]],[[1,1,1],[0,1,1],[1,1,0],[1,1,1]]])
 
-print(period_boundary_get_energy(lattice, 2))
-print(get_energy(lattice))
+# print(period_boundary_get_energy(lattice, 2))
+# print(get_energy(lattice))
 
 # %%
 def policy_ref(key, state, config):
