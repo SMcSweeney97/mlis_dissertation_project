@@ -4,7 +4,7 @@ import os, sys
 from fix_pathing import root_dir
 
 from src.utils.animation import make_animation_vertical, make_animation_horizontal
-from src.envs.ising_model_1d.ising_model import IsingModel, activity, magnetisation, get_possible_states, logp_state_proposal_vmapped, log_ratio_target_dist, logp_acceptance_vmapped, get_energy
+from src.envs.ising_model_1d.ising_model import IsingModel, activity, magnetisation, get_possible_states, logp_state_proposal_vmapped, log_ratio_target_dist, logp_acceptance_vmapped, get_energy, get_kern_filter
 
 from src.utils.plotting import render_spin_trajectory, plot_learning_curve
 import haiku as hk
@@ -26,7 +26,8 @@ import pandas as pd
 # %% INIT ENV
 rng = hk.PRNGSequence(456)
 env_seed = 123
-config = {"L": 2, "bias": 0, "d": 2, "D":2, "temp":0.5, "render_mode": None, "obs_fn": activity, "mean": 0}
+# dimensions = 2
+config = {"L": 4, "bias": 0, "d": 2, "D":2, "temp":0.5, "render_mode": None, "obs_fn": activity, "mean": 0, "kern":get_kern_filter(2)}
 env = IsingModel(config, seed=env_seed)
 # %% EXACT PROBS - only run this for small systems...
 
@@ -45,7 +46,7 @@ def get_all_states(config):
 
 def get_energies(states, config):
 
-    return [get_energy(state, config["D"]) for state in states]
+    return [get_energy(state, config["kern"]) for state in states]
 
 def get_probs(energies, config):
 
@@ -82,6 +83,7 @@ def get_abs_mags(states):
     return [np.abs(magnetisation(state, None, None)) for state in states]
 
 def expected_mag(mags, probs):
+    print(np.sum(mags*probs))
     return np.sum(mags*probs)
 
 def expected_mag_batch(mags, probs_batch):
@@ -92,6 +94,7 @@ energies = get_energies(states, config)
 probs = get_probs(energies, config)
 mags = get_abs_mags(states)
 temps, probs_batch = get_probs_batch(np.arange(0, 6), states, config)
+print(temps)
 expected_mags = expected_mag(mags, probs)
 expected_mags_batch = expected_mag_batch(mags, probs_batch)
 
@@ -216,6 +219,7 @@ for i in range(0, num_snapshots):
         axs[1][i].imshow(diff)
     else:
         axs[1][i].imshow(np.zeros_like(states_cache[0]))
+        
 # %% Policy Magnetisation. 2D Ising model has phase transition around T = 2.
 # For infinite size system, below this mag = 1, above this mag = 0
 exact_result = (mag_df[mag_df["T"]==1/config["temp"]])["M"]

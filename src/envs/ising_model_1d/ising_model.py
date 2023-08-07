@@ -29,6 +29,7 @@ from utils.utils import (
 # pylint: enable=import-error
 
 
+
 def update_one_flip_action_linear(state, action):
     """Applies the update_one_flip action to states that are not in thier linear representation.
     E.g. for 2D, L=4:
@@ -134,8 +135,8 @@ def log_ratio_target_dist(s_t, s_tp1, config):
         beta: the inverse temp (i.e. the parameter for the energy)
         delta_eps: the energy difference
     """
-    s_t_energy = get_energy(s_t, config["D"]) # Gets energy for current state = log[tilde{q}(s)]
-    s_tp1_energy = get_energy(s_tp1, config["D"]) # Gets energy for the next state = log[tilde{q}(s')]
+    s_t_energy = get_energy(s_t, config["kern"]) # Gets energy for current state = log[tilde{q}(s)]
+    s_tp1_energy = get_energy(s_tp1, config["kern"]) # Gets energy for the next state = log[tilde{q}(s')]
     energy_difference = s_tp1_energy-s_t_energy # Compares energy difference
     return jnp.array(-config["temp"]*energy_difference, np.float64) #multiply by facotor -beta
 
@@ -233,63 +234,7 @@ def step_fn(key, s_t, a_t, config):
 
     return key, s_tp1, r_t
 
-# %%
-def get_energy(state, dimensions):
-
-    interaction_strength = 1 #J
-
-    tmp  = 2*state - 1
-    roll_rows = jnp.roll(tmp, 1, axis=0)
-    roll_cols = jnp.roll(tmp, 1, axis=1)
-
-    tmp1 = tmp*roll_rows #gives the col interactions
-    tmp2 = tmp*roll_cols #gives the row interactions
-
-    energy = -interaction_strength*jnp.sum(tmp1 + tmp2)
-
-    return energy
-
-# %%
-# def get_energy(lattice, dimensions):
-
-#     lattice = (lattice * 2) - 1
-
-#     kern = jnp.zeros([3]*dimensions, bool)
-
-#     def run_energy(n, init_val):
-#         kern = init_val
-#         b = jnp.array([1]*dimensions)
-#         c = jnp.array([1]*dimensions)
-
-#         b = b.at[n].add(-1)
-#         c = c.at[n].add(1)
-
-#         b = tuple(b)
-#         c = tuple(c)
-
-#         kern = kern.at[b].set(True)
-#         kern = kern.at[c].set(True)
-
-#         return kern
-
-#     kern = fori_loop(0, dimensions, run_energy, kern)
-
-#     arr = -lattice * jax.scipy.signal.convolve(lattice, kern, mode='same', method="direct")
-#     return jnp.sum(arr)
-
-# %%
-def period_boundary_get_energy(lattice, dimensions):
-    """Computes energy level for a given lattice of n dimensions
-
-    Args:
-        lattice array: Lattice of (0 and 1) or (-1 and 1)
-        dimension int: Integer relating to the number of dimensions of the lattice
-
-    Returns:
-        int: Sum of the energy within the given lattice divided by 2 for twiddled
-    """
-    lattice = (lattice * 2) - 1
-    extended_lattice = jnp.pad(lattice, 1, mode="wrap")
+def get_kern_filter(dimensions):
     kern = jnp.zeros([3]*dimensions, bool)
 
     def run_energy(n, init_val):
@@ -309,13 +254,46 @@ def period_boundary_get_energy(lattice, dimensions):
         return kern
 
     kern = fori_loop(0, dimensions, run_energy, kern)
+    
+    return kern
 
-    print(kern)
-    print(lattice)
-    print(extended_lattice)
+# %%
+def alt_get_energy(state, dimensions):
+
+    interaction_strength = 1 #J
+
+    tmp  = 2*state - 1
+    roll_rows = jnp.roll(tmp, 1, axis=0)
+    roll_cols = jnp.roll(tmp, 1, axis=1)
+
+    tmp1 = tmp*roll_rows #gives the col interactions
+    tmp2 = tmp*roll_cols #gives the row interactions
+
+    energy = -interaction_strength*jnp.sum(tmp1 + tmp2)
+
+    return energy
+
+
+# %%
+def get_energy(lattice, kern):
+    """Computes energy level for a given lattice of n dimensions
+
+    Args:
+        lattice array: Lattice of (0 and 1) or (-1 and 1)
+        dimension int: Integer relating to the number of dimensions of the lattice
+
+    Returns:
+        int: Sum of the energy within the given lattice divided by 2 for twiddled
+    """
+    lattice = (lattice * 2) - 1
+    extended_lattice = jnp.pad(lattice, 1, mode="wrap")
+
+    # print(kern)
+    # print(lattice)
+    # print(extended_lattice)
 
     arr = -lattice * jax.scipy.signal.convolve(extended_lattice, kern, mode='valid', method="direct")
-    print(arr)
+    # print(arr)
     return jnp.sum(arr)/2
 
 # %%
@@ -404,7 +382,6 @@ class IsingModel(BinarySpinsSingleFlip):
 
         self.action_space = spaces.Discrete(config["L"]**config["D"] + 1)
         self.observation_space = spaces.Box(0,1,(config["L"]**config["D"],))
-
 
         if key is not None:
             self.key = key
