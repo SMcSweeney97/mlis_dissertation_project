@@ -4,7 +4,7 @@ import os, sys
 from fix_pathing import root_dir
 
 from src.utils.animation import make_animation_vertical, make_animation_horizontal
-from src.envs.ising_model_1d.ising_model import IsingModel, activity, magnetisation, get_possible_states, logp_state_proposal_vmapped, log_ratio_target_dist, logp_acceptance_vmapped, get_energy
+from src.envs.ising_model_1d.ising_model import IsingModel, activity, magnetisation, get_possible_states, logp_state_proposal_vmapped, log_ratio_target_dist, logp_acceptance_vmapped, get_energy, get_kern_filter
 
 from src.utils.plotting import render_spin_trajectory, plot_learning_curve
 import haiku as hk
@@ -24,14 +24,14 @@ import seaborn as sns
 # %% INIT ENV
 rng = hk.PRNGSequence(456)
 env_seed = 123
-config = {"L": 8, "bias": 0, "d": 2, "D":2, "temp":0.2, "render_mode": None, "obs_fn": activity, "mean": 0}
+config = {"L": 4, "bias": 0, "d": 2, "D":2, "temp":0.2, "render_mode": None, "obs_fn": activity, "mean": 0, "kern":get_kern_filter(2)}
 env = IsingModel(config, seed=env_seed)
 # %% TEST ENERGY FUNCTION
 
 state, _ = env.reset()
 
 print(state)
-print(get_energy(state, 2))
+print(get_energy(state, config["kern"]))
 
 # %% ISING - EXPLICIT TEST OF MCMC STEP FOR DIAGNOSTICS
 
@@ -138,7 +138,7 @@ est_time_full_run = time_per_step * 10**6 / 3600  # time for 1 million steps in 
 print(f"{loop_time*1000:.2f}", "ms")
 # %% Some Snapshots of the state
 num_snapshots = 4
-dt_snapshots = 3
+dt_snapshots = 1
 fig, axs = plt.subplots(2, num_snapshots, squeeze=False)
 for i in range(0, num_snapshots):
     t_idx = i*dt_snapshots
@@ -147,7 +147,7 @@ for i in range(0, num_snapshots):
         diff = np.array(states_cache[t_idx] - states_cache[t_idx-1])
         axs[1][i].imshow(diff)
     else:
-        axs[1][i].imshow(np.zeros_like(states_cache[0]))
+        axs[1][i].imshow(np.zeros_like(states_cache[0]), cmap="grey")
 # %% Policy Magnetisation. 2D Ising model has phase transition around T = 2.
 # For infinite size system, below this mag = 1, above this mag = 0
 plot_learning_curve(np.abs(magnetisation_cache))

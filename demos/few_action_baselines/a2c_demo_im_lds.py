@@ -39,7 +39,7 @@ seed_pi = 234
 seed_vf = 123
 # %% INIT ENV
 # config = {"L": 4, "bias": 0, "d": 2, "D": 2, "temp":0.2, "render_mode": None, "obs_fn": activity}
-config = {"L": 4, "bias": 0, "d": 2, "D":2, "temp":0.5, "render_mode": None, "obs_fn": activity, "mean": 0, "kern":get_kern_filter(2)}
+config = {"L": 4, "bias": 0, "d": 3, "D":2, "temp":0.2, "render_mode": None, "obs_fn": activity, "mean": 0, "kern":get_kern_filter(3)}
 
 env = IsingModel(config, seed=seed_env)
 # %%

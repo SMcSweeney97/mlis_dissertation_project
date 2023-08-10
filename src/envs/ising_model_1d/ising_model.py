@@ -39,6 +39,7 @@ def update_one_flip_action_linear(state, action):
     4. -> shape(4,4) for consistency
     """
     state_shape = state.shape
+    print(action)
     new_state = update_one_flip_action(jnp.ravel(state), action)
     return jnp.reshape(new_state, state_shape)
 
