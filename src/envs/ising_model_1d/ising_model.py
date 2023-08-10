@@ -237,21 +237,22 @@ def step_fn(key, s_t, a_t, config):
 
     return key, s_tp1, r_t
 
+# %%
 def get_kern_filter(dimensions):
     kern = jnp.zeros([3]*dimensions, bool)
 
     def run_energy(n, init_val):
         kern = init_val
-        b = jnp.array([1]*dimensions)
+        # b = jnp.array([1]*dimensions)
         c = jnp.array([1]*dimensions)
 
-        b = b.at[n].add(-1)
+        # b = b.at[n].add(-1)
         c = c.at[n].add(1)
 
-        b = tuple(b)
+        # b = tuple(b)
         c = tuple(c)
 
-        kern = kern.at[b].set(True)
+        # kern = kern.at[b].set(True)
         kern = kern.at[c].set(True)
 
         return kern
@@ -297,9 +298,7 @@ def get_energy(lattice, kern):
 
     arr = -lattice * jax.scipy.signal.convolve(extended_lattice, kern, mode='valid', method="direct")
     # print(arr)
-    return jnp.sum(arr)/2
-
-# %%
+    return jnp.sum(arr)
 
 
 # %%
@@ -309,12 +308,14 @@ import numpy as np
 import jax.numpy as jnp
 from jax.lax import cond, fori_loop
 
-lattice = jnp.array([[1,0,1],[0,1,1],[1,1,0],[0,1,0]])
-# lattice = jnp.array([[1,1],[1,1]])
+# lattice = jnp.array([[1,0,1],[0,1,1],[1,1,0],[0,1,0]])
+lattice = jnp.array([[1,1],[1,1]])
 # lattice = jnp.array([[[1,1,1],[0,1,1],[1,1,0],[1,1,1]],[[1,1,1],[0,1,1],[1,1,0],[1,1,1]],[[1,1,1],[0,1,1],[1,1,0],[1,1,1]]])
 
 # print(period_boundary_get_energy(lattice, 2))
-# print(get_energy(lattice))
+
+print(get_energy(lattice, get_kern_filter(2)))
+print(alt_get_energy(lattice, 2))
 
 # %%
 def policy_ref(key, state, config):
