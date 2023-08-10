@@ -76,7 +76,7 @@ def get_possible_states(state, config):
 
     carry = (state, possible_states)
 
-    _, possible_states = fori_loop(0, num_sites+2, loop_body, carry)
+    _, possible_states = fori_loop(0, num_sites+1, loop_body, carry)
 
     return possible_states
 
@@ -221,6 +221,8 @@ def reward(s_t, a_t, s_tp1, config):
     r_bias = -config["bias"] * config["obs_fn"](s_t, a_t, s_tp1)
     r_logp_ref = logp_ref(s_t, s_tp1, config)
 
+    print(r_bias + r_logp_ref)
+    
     return r_bias + r_logp_ref
 
 def step_fn(key, s_t, a_t, config):
@@ -323,7 +325,7 @@ def policy_ref(key, state, config):
     lattice_size = config["L"]**config["D"]
 
     key, subkey = jax.random.split(key)
-    a_t = jax.random.randint(key=subkey, minval=0, maxval=config["L"]*config["D"]+2, shape=(1,), dtype=np.int64)
+    a_t = jax.random.randint(key=subkey, minval=0, maxval=config["L"]**config["D"]+1, shape=(1,), dtype=np.int64)
     proposed_state = update_one_flip_action_linear(state, a_t)
 
     prob_accept = jnp.exp(logp_acceptance(state, proposed_state, config))

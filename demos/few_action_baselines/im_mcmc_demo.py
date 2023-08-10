@@ -24,7 +24,7 @@ import seaborn as sns
 # %% INIT ENV
 rng = hk.PRNGSequence(456)
 env_seed = 123
-config = {"L": 4, "bias": 0, "d": 2, "D":2, "temp":0.2, "render_mode": None, "obs_fn": activity, "mean": 0, "kern":get_kern_filter(2)}
+config = {"L": 2, "bias": 0, "d": 2, "D":3, "temp":0.2, "render_mode": None, "obs_fn": activity, "mean": 0, "kern":get_kern_filter(3)}
 env = IsingModel(config, seed=env_seed)
 # %% TEST ENERGY FUNCTION
 
@@ -139,20 +139,20 @@ print(f"{loop_time*1000:.2f}", "ms")
 # %% Some Snapshots of the state
 num_snapshots = 4
 dt_snapshots = 1
-fig, axs = plt.subplots(2, num_snapshots, squeeze=False)
-for i in range(0, num_snapshots):
-    t_idx = i*dt_snapshots
-    axs[0][i].imshow(states_cache[t_idx], cmap="gray_r")
-    if i > 0:
-        diff = np.array(states_cache[t_idx] - states_cache[t_idx-1])
-        axs[1][i].imshow(diff)
-    else:
-        axs[1][i].imshow(np.zeros_like(states_cache[0]), cmap="grey")
-# %% Policy Magnetisation. 2D Ising model has phase transition around T = 2.
-# For infinite size system, below this mag = 1, above this mag = 0
-plot_learning_curve(np.abs(magnetisation_cache))
-plt.title(f"T = {1/config['temp']:.2f}, M = {np.mean(np.absolute(magnetisation_cache)[600::])}", fontsize=20)
-plt.show()
+# fig, axs = plt.subplots(2, num_snapshots, squeeze=False)
+# for i in range(0, num_snapshots):
+#     t_idx = i*dt_snapshots
+#     axs[0][i].imshow(states_cache[t_idx], cmap="gray_r")
+#     if i > 0:
+#         diff = np.array(states_cache[t_idx] - states_cache[t_idx-1])
+#         axs[1][i].imshow(diff)
+#     else:
+#         axs[1][i].imshow(np.zeros_like(states_cache[0]))
+# # %% Policy Magnetisation. 2D Ising model has phase transition around T = 2.
+# # For infinite size system, below this mag = 1, above this mag = 0
+# plot_learning_curve(np.abs(magnetisation_cache))
+# plt.title(f"T = {1/config['temp']:.2f}, M = {np.mean(np.absolute(magnetisation_cache)[600::])}", fontsize=20)
+# plt.show()
 
 # %% PLOT CUMULATIVE MEAN OF REWARDS
 fig_entropy = plot_learning_curve(

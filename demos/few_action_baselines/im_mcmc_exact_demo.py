@@ -27,7 +27,7 @@ import pandas as pd
 rng = hk.PRNGSequence(456)
 env_seed = 123
 # dimensions = 2
-config = {"L": 4, "bias": 0, "d": 2, "D":2, "temp":0.5, "render_mode": None, "obs_fn": activity, "mean": 0, "kern":get_kern_filter(2)}
+config = {"L": 4, "bias": 0, "d": 2, "D":2, "temp":0.2, "render_mode": None, "obs_fn": activity, "mean": 0, "kern":get_kern_filter(2)}
 env = IsingModel(config, seed=env_seed)
 # %% EXACT PROBS - only run this for small systems...
 
@@ -38,7 +38,7 @@ def get_all_states(config):
     site = [0,1]
     sites = [site for _ in range(config["L"]**config["D"])]
     for state in itertools.product(*sites):
-        all_states.append(np.reshape(state, (config["L"], config["L"])))
+        all_states.append(np.reshape(state, ((config["L"],) * config["D"])))
 
     all_states = np.array(all_states)
 
