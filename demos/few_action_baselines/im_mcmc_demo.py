@@ -24,7 +24,7 @@ import seaborn as sns
 # %% INIT ENV
 rng = hk.PRNGSequence(456)
 env_seed = 123
-config = {"L": 2, "bias": 0, "d": 2, "D":3, "temp":0.2, "render_mode": None, "obs_fn": activity, "mean": 0, "kern":get_kern_filter(3)}
+config = {"L": 4, "bias": 1, "d": 2, "D":2, "temp":0.1, "render_mode": None, "obs_fn": activity, "mean": 0, "kern":get_kern_filter(2)}
 env = IsingModel(config, seed=env_seed)
 # %% TEST ENERGY FUNCTION
 
