@@ -74,7 +74,7 @@ def get_possible_states(state, config):
 
     carry = (state, possible_states)
 
-    _, possible_states = fori_loop(0, num_sites+2, loop_body, carry)
+    _, possible_states = fori_loop(0, num_sites+1, loop_body, carry)
 
     return possible_states
 
@@ -227,7 +227,6 @@ def step_fn(key, s_t, a_t, config):
     For bias=0, subtracting the entropy of the policy from the reward gives the KL-divergence between the policy
     and the MH-MCMC reference dynamics.
     """
-
     s_tp1 = update_one_flip_action_linear(s_t, a_t)
     r_t = reward(s_t, a_t, s_tp1, config)
 
@@ -278,7 +277,7 @@ def get_energy(state, dimensions):
 #     return jnp.sum(arr)
 
 # %%
-def period_boundary_get_energy(lattice, dimensions):
+def alternate_get_energy(lattice, dimensions):
     """Computes energy level for a given lattice of n dimensions
 
     Args:
@@ -310,12 +309,12 @@ def period_boundary_get_energy(lattice, dimensions):
 
     kern = fori_loop(0, dimensions, run_energy, kern)
 
-    print(kern)
-    print(lattice)
-    print(extended_lattice)
+    #print(kern)
+    #print(lattice)
+    #print(extended_lattice)
 
     arr = -lattice * jax.scipy.signal.convolve(extended_lattice, kern, mode='valid', method="direct")
-    print(arr)
+    #print(arr)
     return jnp.sum(arr)/2
 
 # %%
@@ -344,7 +343,7 @@ def policy_ref(key, state, config):
     lattice_size = config["L"]**config["D"]
 
     key, subkey = jax.random.split(key)
-    a_t = jax.random.randint(key=subkey, minval=0, maxval=config["L"]*config["D"]+2, shape=(1,), dtype=np.int64)
+    a_t = jax.random.randint(key=subkey, minval=0, maxval=config["L"]**config["D"]+2, shape=(1,), dtype=np.int64)
     proposed_state = update_one_flip_action_linear(state, a_t)
 
     prob_accept = jnp.exp(logp_acceptance(state, proposed_state, config))

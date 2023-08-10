@@ -26,7 +26,7 @@ import pandas as pd
 # %% INIT ENV
 rng = hk.PRNGSequence(456)
 env_seed = 123
-config = {"L": 2, "bias": 0, "d": 2, "D":2, "temp":0.5, "render_mode": None, "obs_fn": activity, "mean": 0}
+config = {"L": 4, "bias": 0, "d": 2, "D":2, "temp":0.2, "render_mode": None, "obs_fn": activity, "mean": 0}
 env = IsingModel(config, seed=env_seed)
 # %% EXACT PROBS - only run this for small systems...
 
@@ -158,7 +158,7 @@ est_time_full_run = time_per_step * 10**6 / 3600  # time for 1 million steps in 
 print(f"{loop_time*1000:.2f}", "ms")
 # %% ISING
 
-NUM_STEPS = 10000
+NUM_STEPS = 100000
 start_time = time.time()
 
 (
@@ -205,7 +205,7 @@ time_per_step = loop_time / NUM_STEPS
 est_time_full_run = time_per_step * 10**6 / 3600  # time for 1 million steps in hours
 print(f"{loop_time*1000:.2f}", "ms")
 # %% Some Snapshots of the state
-num_snapshots = 4
+num_snapshots =15
 dt_snapshots = 3
 fig, axs = plt.subplots(2, num_snapshots, squeeze=False)
 for i in range(0, num_snapshots):
