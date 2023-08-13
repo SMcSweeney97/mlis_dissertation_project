@@ -27,7 +27,7 @@ import pandas as pd
 rng = hk.PRNGSequence(456)
 env_seed = 123
 # dimensions = 2
-config = {"L": 4, "bias": 0, "d": 2, "D":2, "temp":0.2, "render_mode": None, "obs_fn": activity, "mean": 0, "kern":get_kern_filter(2)}
+config = {"L": 2, "bias": 0, "d": 2, "D":2, "temp":1/2.269, "render_mode": None, "obs_fn": activity, "mean": 0, "kern":get_kern_filter(2)}
 env = IsingModel(config, seed=env_seed)
 # %% EXACT PROBS - only run this for small systems...
 
@@ -161,79 +161,105 @@ est_time_full_run = time_per_step * 10**6 / 3600  # time for 1 million steps in 
 print(f"{loop_time*1000:.2f}", "ms")
 # %% ISING
 
-NUM_STEPS = 10000
-start_time = time.time()
+#%%
+tempsTot = []
+means = []
+k = 1
+for i in range(1,k+1):
+    config = {"L": 2, "bias": 0, "d": 2, "D":2, "temp":1/(i*(5/(k))), "render_mode": None, "obs_fn": activity, "mean": 0, "kern":get_kern_filter(2)}
+    env = IsingModel(config, seed=env_seed)
 
-(
-    _,
-    _,
-) = env.reset()   #STATE IS INITIALISED
-states_cache = [env.state]
-env_rewards_cache = []
-rewards_cache = []
-activity_cache = []
-magnetisation_cache = []
-actions_cache = []
-current_cache = []
-logp_cache = []
-s_t = env.state
+    NUM_STEPS = 100000
+    start_time = time.time()
 
-activity_jit = jit(activity)  #activity counts flips
-magnetisation_jit = jit(magnetisation)
+    (
+        _,
+        _,
+    ) = env.reset()   #STATE IS INITIALISED
+    states_cache = [env.state]
+    env_rewards_cache = []
+    rewards_cache = []
+    activity_cache = []
+    magnetisation_cache = []
+    actions_cache = []
+    current_cache = []
+    logp_cache = []
+    s_t = env.state
 
-for t in range(NUM_STEPS):
+    activity_jit = jit(activity)  #activity counts flips
+    magnetisation_jit = jit(magnetisation)
 
-    # print(t)
+    for t in range(NUM_STEPS):
 
-    logp, (a_t, _) = env.policy_ref_jit(next(rng), s_t)
+        # print(t)
 
-    actions_cache.append(a_t)
-    logp_cache.append(logp)  # entropy
+        logp, (a_t, _) = env.policy_ref_jit(next(rng), s_t)
 
-    s_tp1, r_t, terminated, truncated, info = env.step(a_t)
+        actions_cache.append(a_t)
+        logp_cache.append(logp)  # entropy
 
-    # print("...", logp, r_t, a_t[0])
+        s_tp1, r_t, terminated, truncated, info = env.step(a_t)
 
-    env_rewards_cache.append(r_t) #log[q] + r_obs
-    rewards_cache.append(r_t - logp)  # subtract entropy term, logp
+        # print("...", logp, r_t, a_t[0])
 
-    states_cache.append(s_tp1)
-    activity_cache.append(activity_jit(s_t, a_t, s_tp1))
-    magnetisation_cache.append(magnetisation_jit(s_t, a_t, s_tp1))
+        env_rewards_cache.append(r_t) #log[q] + r_obs
+        rewards_cache.append(r_t - logp)  # subtract entropy term, logp
 
-    s_t = s_tp1
+        states_cache.append(s_tp1)
+        activity_cache.append(activity_jit(s_t, a_t, s_tp1))
+        magnetisation_cache.append(magnetisation_jit(s_t, a_t, s_tp1))
 
-loop_time = time.time() - start_time
-time_per_step = loop_time / NUM_STEPS
-est_time_full_run = time_per_step * 10**6 / 3600  # time for 1 million steps in hours
-print(f"{loop_time*1000:.2f}", "ms")
+        s_t = s_tp1
+
+    loop_time = time.time() - start_time
+    time_per_step = loop_time / NUM_STEPS
+    est_time_full_run = time_per_step * 10**6 / 3600  # time for 1 million steps in hours
+    print(f"{loop_time*1000:.2f}", "ms")
+    tempsTot.append(1/config["temp"])
+    print(i)
+    means.append(np.mean(np.absolute(magnetisation_cache)[600::]))
+
+print(tempsTot, means)
+
+
+
 # %% Some Snapshots of the state
-num_snapshots = 4
-dt_snapshots = 3
-fig, axs = plt.subplots(2, num_snapshots, squeeze=False)
-for i in range(0, num_snapshots):
-    t_idx = i*dt_snapshots
-    axs[0][i].imshow(states_cache[t_idx], cmap="gray_r")
-    if i > 0:
-        diff = np.array(states_cache[t_idx] - states_cache[t_idx-1])
-        axs[1][i].imshow(diff)
-    else:
-        axs[1][i].imshow(np.zeros_like(states_cache[0]))
+# num_snapshots = 4
+# dt_snapshots = 3
+# fig, axs = plt.subplots(2, num_snapshots, squeeze=False)
+# for i in range(0, num_snapshots):
+#     t_idx = i*dt_snapshots
+#     axs[0][i].imshow(states_cache[t_idx], cmap="gray_r")
+#     if i > 0:
+#         diff = np.array(states_cache[t_idx] - states_cache[t_idx-1])
+#         axs[1][i].imshow(diff)
+#     else:
+#         axs[1][i].imshow(np.zeros_like(states_cache[0]))
         
-# %% Policy Magnetisation. 2D Ising model has phase transition around T = 2.
-# For infinite size system, below this mag = 1, above this mag = 0
-exact_result = (mag_df[mag_df["T"]==1/config["temp"]])["M"]
-plot_learning_curve(np.abs(magnetisation_cache))
-plt.plot([], [], "r-", linewidth=4, label="MCMC")
-plt.title(f"T = {1/config['temp']:.2f}, M = {np.mean(np.absolute(magnetisation_cache)[600::])}", fontsize=20)
-plt.hlines(exact_result, 0, len(magnetisation_cache), label="Exact", linewidth=4, linestyle="dashed")
-plt.legend(fontsize=20)
-plt.show()
+# # %% Policy Magnetisation. 2D Ising model has phase transition around T = 2.
+# # For infinite size system, below this mag = 1, above this mag = 0
+# exact_result = (mag_df[mag_df["T"]==1/config["temp"]])["M"]
+# plot_learning_curve(np.abs(magnetisation_cache))
+# plt.plot([], [], "r-", linewidth=4, label="MCMC")
+# plt.title(f"T = {1/config['temp']:.2f}, M = {np.mean(np.absolute(magnetisation_cache)[600::])}", fontsize=20)
+# plt.hlines(exact_result, 0, len(magnetisation_cache), label="Exact", linewidth=4, linestyle="dashed")
+# plt.legend(fontsize=20)
+# plt.show()
 # %%
 
 fig, ax = plt.subplots(1, 1)
 
 ax.plot(temps, expected_mags_batch, "b^--", label="Exact")
-ax.plot([1/config["temp"]], [np.mean(np.absolute(magnetisation_cache)[600::])], "ks", label="MCMC")
+ax.plot(tempsTot, means, "ks", label="MCMC")
+ax.set_title("Actions taken by MCMC at T=", fontsize="10")
+
+# This will add label to X-axis
+ax.set_xlabel("Number of Actions", fontsize="10")
+# This will add label to Y-axis
+ax.set_ylabel("Number of ", fontsize="10")
+# ax.plot([1/config["temp"]], [np.mean(np.absolute(magnetisation_cache)[600::])], "ks", label="MCMC")
 ax.legend()
+
+fig.savefig("testimgage.pdf", format="pdf", bbox_inches="tight", dpi=5000)
+plt.show()
 # %%

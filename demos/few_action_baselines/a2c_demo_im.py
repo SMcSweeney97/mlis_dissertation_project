@@ -17,7 +17,7 @@ import os, sys
 from fix_pathing import root_dir
 
 from src.utils.animation import make_animation_vertical, make_animation_horizontal
-from src.envs.ising_model_1d.ising_model_1d import IsingModel, activity
+from src.envs.ising_model_1d.ising_model import IsingModel, activity, get_kern_filter
 
 from src.utils.plotting import render_spin_trajectory, plot_learning_curve
 import haiku as hk
@@ -39,7 +39,7 @@ seed_pi = 786
 seed_vf = 123
 # %% INIT ENV
 rng = hk.PRNGSequence(seed_env)
-config = {"L": 20, "bias": 0, "d": 2, "D": 2, "temp":0.2, "render_mode": None, "obs_fn": activity, "mean": 0}
+config = {"L": 20, "bias": 0, "d": 2, "D":2, "temp":0.2, "render_mode": None, "obs_fn": activity, "mean": 0, "kern":get_kern_filter(2)}
 env = IsingModel(config)
 # %%
 def func_v(S, is_training): 

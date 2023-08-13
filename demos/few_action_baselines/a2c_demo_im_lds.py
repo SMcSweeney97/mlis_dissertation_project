@@ -39,7 +39,7 @@ seed_pi = 234
 seed_vf = 123
 # %% INIT ENV
 # config = {"L": 4, "bias": 0, "d": 2, "D": 2, "temp":0.2, "render_mode": None, "obs_fn": activity}
-config = {"L": 4, "bias": 0, "d": 3, "D":2, "temp":0.2, "render_mode": None, "obs_fn": activity, "mean": 0, "kern":get_kern_filter(3)}
+config = {"L": 20, "bias": 1, "d": 2, "D":2, "temp":1/2.269, "render_mode": None, "obs_fn": activity, "mean": 0, "kern":get_kern_filter(2)}
 
 env = IsingModel(config, seed=seed_env)
 # %%
@@ -58,7 +58,7 @@ LR_VF = 1e-2
 LR_R = 1e-3
 tracer = coax.reward_tracing.NStep(n=1, gamma=DISCOUNT) #stores (R_t^n, I_t^n, S_t+n, R_t+n)
 # %% RUN A TEST LOOP WITH ASSERTIONS ETC.
-NUM_STEPS = 10000
+NUM_STEPS = 50000
 OBS_FREQ = 1
 s_0, _ = env.reset()
 tracer.reset()
@@ -162,7 +162,7 @@ plt.title(f"MC Approx to KL-div in Steady State = {np.mean(kl_div):.2f}")
 # %% COMPARE WITH TD-EST
 kl_div_est = -np.ravel(avg_reward_ests[1::]) - np.cumsum(config["bias"]*np.ravel(activities))/np.arange(1,len(np.ravel(activities))+1)
 plt.plot(kl_div_est)
-plt.title(f"MC Approx to KL-div in Steady State = {np.mean(kl_div_est[6000::]):.2f}")
+plt.title(f"MC Approx to Estimate of KL-div in Steady State = {np.mean(kl_div_est[6000::]):.2f}")
 # %% EVALUATE THE POLICY
 # %% RUN A TEST LOOP WITH ASSERTIONS ETC.
 NUM_STEPS = 10000
